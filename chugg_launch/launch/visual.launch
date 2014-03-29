@@ -1,0 +1,10 @@
+<launch>
+  
+  <arg name="fixed-frame" default="/camera/" />
+    
+  <!-- Launch rviz with our config file -->
+  <node pkg="rviz" type="rviz" name="chugg_visual" output="screen"
+	args="--display-config=$(find chugg_launch)/params/chugg.rviz
+	      --fixed-frame=$(arg fixed-frame)" />
+
+</launch>
