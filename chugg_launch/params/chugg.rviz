@@ -59,15 +59,15 @@ Visualization Manager:
       Frames:
         All Enabled: false
         camera_depth_frame:
-          Value: false
+          Value: true
         camera_depth_optical_frame:
           Value: true
         camera_link:
           Value: true
         camera_rgb_frame:
-          Value: false
+          Value: true
         camera_rgb_optical_frame:
-          Value: false
+          Value: true
       Marker Scale: 1
       Name: TF
       Show Arrows: true
@@ -137,7 +137,7 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: camera_depth_frame
+    Fixed Frame: camera_link
     Frame Rate: 30
   Name: root
   Tools:
@@ -158,17 +158,17 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 5.69393
+      Distance: 5.61194
       Focal Point:
         X: 0
         Y: 0
         Z: 0
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.215204
+      Pitch: 0.360204
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.05675
+      Yaw: 2.85175
     Saved: ~
 Window Geometry:
   Displays:
