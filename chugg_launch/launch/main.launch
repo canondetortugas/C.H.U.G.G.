@@ -1,0 +1,6 @@
+<launch>
+
+  <include file="$(find chugg_launch)/launch/sensors.launch"/>
+  <include file="$(find chugg_launch)/launch/tracker.launch"/>
+
+</launch>

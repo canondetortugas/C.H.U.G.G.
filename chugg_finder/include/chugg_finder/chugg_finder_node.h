@@ -39,33 +39,153 @@
 #ifndef CHUGG_CHUGGFINDER_CHUGGFINDER
 #define CHUGG_CHUGGFINDER_CHUGGFINDER
 
+/// std
+#include <random>
+
 // ROS
 #include <ros/ros.h>
 
+#include <tf/transform_listener.h>
+#include <tf/transform_broadcaster.h>
+
 // uscauv
 #include <uscauv_common/base_node.h>
+#include <uscauv_common/multi_reconfigure.h>
 
-class ChuggFinderNode: public BaseNode
+/// point clouds
+
+#include <pcl/registration/icp.h>
+#include <pcl/registration/icp_nl.h>
+#include <pcl/ros/conversions.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <sensor_msgs/PointCloud2.h>
+
+/// eigen
+#include <Eigen/Geometry>
+
+/// C.H.U.G.G.
+#include <chugg_finder/ICPConfig.h>
+#include <chugg_finder/ChuggFinderConfig.h>
+
+typedef chugg_finder::ICPConfig _ICPConfig;
+typedef chugg_finder::ChuggFinderConfig _ChuggFinderConfig;
+typedef pcl::PointCloud<pcl::PointXYZ> _CloudXYZ;
+typedef sensor_msgs::PointCloud2 _PointCloud2Msg;
+
+class ChuggFinderNode: public BaseNode, public MultiReconfigure
 {
+private:
+  ros::NodeHandle nh_rel_;
+  _ICPConfig * icp_config_;
+  _ChuggFinderConfig * config_;
   
- public:
-  ChuggFinderNode(): BaseNode("ChuggFinder")
-   {
-   }
+  ros::Subscriber cloud_sub_;
+  /// Publish point cloud of C.H.U.G.G.
+  ros::Publisher chugg_pub_;
 
- private:
+  ////////////////////////////////////////////////////////////
+  _CloudXYZ chugg_cloud_;
+  
+public:
+  ChuggFinderNode(): BaseNode("ChuggFinder"), nh_rel_("~")
+  {
+  }
+
+private:
 
   // Running spin() will cause this function to be called before the node begins looping the spinOnce() function.
   void spinFirst()
-     {
-	 
-     }  
+  {
+    addReconfigureServer<_ICPConfig>("icp", &ChuggFinderNode::reconfigureCallbackICP, this );
+    icp_config_ = &getLatestConfig<_ICPConfig>("icp");
+    addReconfigureServer<_ChuggFinderConfig>("chugg_finder", &ChuggFinderNode::reconfigureCallback, this );
+    config_ = &getLatestConfig<_ChuggFinderConfig>("chugg_finder");
+    
+    chugg_pub_ = nh_rel_.advertise<sensor_msgs::PointCloud2>("chugg_cloud", 1);
+    cloud_sub_ = nh_rel_.subscribe<_PointCloud2Msg>("cloud_in", 1, &ChuggFinderNode::pointCloudCallback, this);
+  }  
 
   // Running spin() will cause this function to get called at the loop rate until this node is killed.
   void spinOnce()
-     {
+  {
 
-     }
+  }
+
+  void reconfigureCallbackICP( _ICPConfig const & config )
+  {
+  }
+
+  void reconfigureCallback( _ChuggFinderConfig const & config )
+  {
+    /// PCL uses float as default scalar
+    typedef Eigen::Translation<float, 3> _Translation;
+
+    /// Convert from inches to meters
+    double const edge_length = config.edge_length * 0.0254;
+    size_t const n_samples = config.side_samples;    
+
+    std::default_random_engine generator;
+    std::uniform_real_distribution<double> distribution( -edge_length/2.0, edge_length/2.0);
+
+    chugg_cloud_ = _CloudXYZ();
+    _CloudXYZ side_cloud;
+    for( size_t idx = 0; idx < n_samples; ++idx)
+      {
+	double const x = distribution(generator);
+	double const y = distribution(generator);
+
+	pcl::PointXYZ point;
+	point.x = x;
+	point.y = y;
+	point.z = 0;
+	side_cloud.push_back(point);
+      }
+
+    _CloudXYZ up, down, right, left, front, back;
+    
+    Eigen::Affine3f up_tf = Eigen::Affine3f::Identity() * _Translation(0,0,edge_length/2),
+      down_tf = Eigen::Affine3f::Identity() *_Translation(0,0,-edge_length/2),
+      right_tf = _Translation(0,edge_length/2,0) * Eigen::AngleAxisf(0.5*M_PI, Eigen::Vector3f::UnitX() ),
+      left_tf = _Translation(0,-edge_length/2,0) * Eigen::AngleAxisf(0.5*M_PI, Eigen::Vector3f::UnitX() ),
+      front_tf = _Translation(edge_length/2,0,0) * Eigen::AngleAxisf(0.5*M_PI, Eigen::Vector3f::UnitY() ),
+      back_tf = _Translation(-edge_length/2,0,0) * Eigen::AngleAxisf(0.5*M_PI, Eigen::Vector3f::UnitY() );
+      
+    pcl::transformPointCloud(side_cloud, up, up_tf);
+    pcl::transformPointCloud(side_cloud, down, down_tf);
+    pcl::transformPointCloud(side_cloud, right, right_tf);
+    pcl::transformPointCloud(side_cloud, left, left_tf);
+    pcl::transformPointCloud(side_cloud, front, front_tf);
+    pcl::transformPointCloud(side_cloud, back, back_tf);
+    
+    chugg_cloud_ = up;
+    chugg_cloud_ += down;
+    chugg_cloud_ += right;
+    chugg_cloud_ += left;
+    chugg_cloud_ += front;
+    chugg_cloud_ += back;
+  }
+  
+  void pointCloudCallback( _PointCloud2Msg::ConstPtr const & msg )
+  {
+    pcl::PCLPointCloud2 pcl_cloud;
+    _CloudXYZ cloud;
+    sensor_msgs::PointCloud2 chugg_output;
+
+    pcl_conversions::toPCL(*msg, pcl_cloud);
+    pcl::fromPCLPointCloud2 (pcl_cloud, cloud);
+
+    if( cloud.size() < 1 )
+      return;
+
+    std::string const base_frame = cloud.header.frame_id;
+    
+    chugg_cloud_.header.frame_id = base_frame;
+    
+    pcl::toPCLPointCloud2(chugg_cloud_, pcl_cloud);
+    pcl_conversions::fromPCL(pcl_cloud, chugg_output);
+
+    chugg_pub_.publish( chugg_output);
+  }
 
 };
 

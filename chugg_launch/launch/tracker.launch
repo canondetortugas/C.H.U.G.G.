@@ -1,0 +1,6 @@
+<launch>
+
+  <remap from="chugg_finder/cloud_in" to="camera/depth_registered/points" />
+  <include file="$(find chugg_finder)/launch/chugg_finder.launch" />
+
+</launch>
