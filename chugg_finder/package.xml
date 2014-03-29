@@ -40,9 +40,25 @@
   <!--   <run_depend>message_runtime</run_depend> -->
   <!-- Use test_depend for packages you need only for testing: -->
   <!--   <test_depend>gtest</test_depend> -->
+
+  <build_depend>roscpp</build_depend>
+  <run_depend>roscpp</run_depend>
+  
+  <run_depend>uscauv_common</run_depend>
+  <build_depend>uscauv_common</build_depend>
+
+  <run_depend>sensor_msgs</run_depend>
+  <build_depend>sensor_msgs</build_depend>
+
+
+  <run_depend>cpp11</run_depend>
+  <build_depend>cpp11</build_depend>
+
+  <run_depend>dynamic_reconfigure</run_depend>
+  <build_depend>dynamic_reconfigure</build_depend>
+
   <buildtool_depend>catkin</buildtool_depend>
-
-
+  
   <!-- The export tag contains other, unspecified, tags -->
   <export>
     <!-- You can specify that this package is a metapackage here: -->
