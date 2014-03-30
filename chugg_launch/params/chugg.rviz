@@ -8,6 +8,7 @@ Panels:
         - /Status1
         - /TF1
         - /TF1/Frames1
+        - /Marker1
         - /PointCloud21
         - /PointCloud22
         - /Image1
@@ -56,9 +57,27 @@ Visualization Manager:
       Value: true
     - Class: rviz/TF
       Enabled: true
-      Frame Timeout: 15
+      Frame Timeout: 1
       Frames:
         All Enabled: false
+        ar_marker_0:
+          Value: true
+        ar_marker_1:
+          Value: true
+        ar_marker_133:
+          Value: true
+        ar_marker_193:
+          Value: true
+        ar_marker_2:
+          Value: true
+        ar_marker_211:
+          Value: true
+        ar_marker_3:
+          Value: true
+        ar_marker_4:
+          Value: true
+        ar_marker_5:
+          Value: true
         camera_depth_frame:
           Value: true
         camera_depth_optical_frame:
@@ -81,8 +100,36 @@ Visualization Manager:
               {}
           camera_rgb_frame:
             camera_rgb_optical_frame:
-              {}
+              ar_marker_0:
+                {}
+              ar_marker_1:
+                {}
+              ar_marker_133:
+                {}
+              ar_marker_193:
+                {}
+              ar_marker_2:
+                {}
+              ar_marker_211:
+                {}
+              ar_marker_3:
+                {}
+              ar_marker_4:
+                {}
+              ar_marker_5:
+                {}
       Update Interval: 0
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /visualization_marker
+      Name: Marker
+      Namespaces:
+        3dpts: true
+        arrow: true
+        basic_shapes: true
+        main_shapes: true
+      Queue Size: 100
       Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
@@ -96,7 +143,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: RGB8
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 4096
@@ -112,7 +159,7 @@ Visualization Manager:
       Topic: /camera/depth_registered/points
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -188,17 +235,17 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 5.61194
+      Distance: 4.03443
       Focal Point:
         X: 0
         Y: 0
         Z: 0
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.575204
+      Pitch: 0.505204
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.31175
+      Yaw: 3.0313
     Saved: ~
 Window Geometry:
   Displays:

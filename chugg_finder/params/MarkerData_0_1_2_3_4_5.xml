@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<multimarker markers="6">
+  <!-- Looking at an example file makes me think that corners should be specified counterclockwise, starting from bottom left -->
+  <!-- I'm not sure if this is a requirement or not -->
+
+  <!-- Up -->
+    <marker index="0" status="1">
+        <corner x="3.5" y="-3.5" z="3.5" />
+        <corner x="3.5" y="3.5" z="3.5" />
+        <corner x="-3.5" y="3.5" z="3.5" />
+        <corner x="-3.5" y="-3.5" z="3.5" />
+    </marker>
+    <!-- Down -->
+    <marker index="1" status="1">
+        <corner x="3.5" y="-3.5" z="-3.5" />
+        <corner x="-3.5" y="-3.5" z="-3.5" />
+        <corner x="-3.5" y="3.5" z="-3.5" />
+        <corner x="3.5" y="3.5" z="-3.5" />
+    </marker>
+    <!-- Right -->
+    <marker index="2" status="1">
+        <corner x="3.5" y="3.5" z="-3.5" />
+        <corner x="-3.5" y="3.5" z="-3.5" />
+        <corner x="-3.5" y="3.5" z="3.5" />
+        <corner x="3.5" y="3.5" z="3.5" />
+    </marker>
+    <!-- Left -->
+    <marker index="3" status="1">
+        <corner x="3.5" y="-3.5" z="3.5" />
+        <corner x="-3.5" y="-3.5" z="3.5" />
+        <corner x="-3.5" y="-3.5" z="-3.5" />
+        <corner x="3.5" y="-3.5" z="-3.5" />
+    </marker>
+    <!-- Back -->
+    <marker index="4" status="1">
+        <corner x="-3.5" y="-3.5" z="3.5" />
+        <corner x="-3.5" y="3.5" z="3.5" />
+        <corner x="-3.5" y="3.5" z="-3.5" />
+        <corner x="-3.5" y="-3.5" z="-3.5" />
+    </marker>
+    <!-- Front -->
+    <marker index="5" status="1">
+        <corner x="3.5" y="-3.5" z="-3.5" />
+        <corner x="3.5" y="3.5" z="-3.5" />
+        <corner x="3.5" y="3.5" z="3.5" />
+        <corner x="3.5" y="-3.5" z="3.5" />
+    </marker>
+</multimarker>
