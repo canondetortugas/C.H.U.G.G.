@@ -59,6 +59,8 @@
 #include <pcl/ros/conversions.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <sensor_msgs/PointCloud2.h>
+/// Necessary to deal with pcl::PointCloud<T> as message
+#include <pcl_ros/point_cloud.h>
 
 /// eigen
 #include <Eigen/Geometry>
@@ -81,14 +83,15 @@ private:
   
   ros::Subscriber cloud_sub_;
   /// Publish point cloud of C.H.U.G.G.
-  ros::Publisher chugg_pub_;
+  ros::Publisher chugg_pub_, debug_pub_;
 
   ////////////////////////////////////////////////////////////
-  _CloudXYZ chugg_cloud_;
+  _CloudXYZ::Ptr chugg_cloud_;
   
 public:
   ChuggFinderNode(): BaseNode("ChuggFinder"), nh_rel_("~")
   {
+    chugg_cloud_ = boost::make_shared<_CloudXYZ>();
   }
 
 private:
@@ -101,7 +104,8 @@ private:
     addReconfigureServer<_ChuggFinderConfig>("chugg_finder", &ChuggFinderNode::reconfigureCallback, this );
     config_ = &getLatestConfig<_ChuggFinderConfig>("chugg_finder");
     
-    chugg_pub_ = nh_rel_.advertise<sensor_msgs::PointCloud2>("chugg_cloud", 1);
+    chugg_pub_ = nh_rel_.advertise<_CloudXYZ>("chugg_cloud", 1);
+    debug_pub_ = nh_rel_.advertise<_CloudXYZ>("debug_cloud", 1);
     cloud_sub_ = nh_rel_.subscribe<_PointCloud2Msg>("cloud_in", 1, &ChuggFinderNode::pointCloudCallback, this);
   }  
 
@@ -127,7 +131,6 @@ private:
     std::default_random_engine generator;
     std::uniform_real_distribution<double> distribution( -edge_length/2.0, edge_length/2.0);
 
-    chugg_cloud_ = _CloudXYZ();
     _CloudXYZ side_cloud;
     for( size_t idx = 0; idx < n_samples; ++idx)
       {
@@ -141,6 +144,7 @@ private:
 	side_cloud.push_back(point);
       }
 
+    /// The sides
     _CloudXYZ up, down, right, left, front, back;
     
     Eigen::Affine3f up_tf = Eigen::Affine3f::Identity() * _Translation(0,0,edge_length/2),
@@ -157,34 +161,62 @@ private:
     pcl::transformPointCloud(side_cloud, front, front_tf);
     pcl::transformPointCloud(side_cloud, back, back_tf);
     
-    chugg_cloud_ = up;
-    chugg_cloud_ += down;
-    chugg_cloud_ += right;
-    chugg_cloud_ += left;
-    chugg_cloud_ += front;
-    chugg_cloud_ += back;
+    *chugg_cloud_ = up;
+    *chugg_cloud_ += down;
+    *chugg_cloud_ += right;
+    *chugg_cloud_ += left;
+    *chugg_cloud_ += front;
+    *chugg_cloud_ += back;
   }
   
   void pointCloudCallback( _PointCloud2Msg::ConstPtr const & msg )
   {
     pcl::PCLPointCloud2 pcl_cloud;
-    _CloudXYZ cloud;
+    _CloudXYZ::Ptr cloud =  boost::make_shared<_CloudXYZ>();
     sensor_msgs::PointCloud2 chugg_output;
 
     pcl_conversions::toPCL(*msg, pcl_cloud);
-    pcl::fromPCLPointCloud2 (pcl_cloud, cloud);
+    pcl::fromPCLPointCloud2 (pcl_cloud, *cloud);
 
-    if( cloud.size() < 1 )
+    if( cloud->size() < 1 )
       return;
 
-    std::string const base_frame = cloud.header.frame_id;
-    
-    chugg_cloud_.header.frame_id = base_frame;
-    
-    pcl::toPCLPointCloud2(chugg_cloud_, pcl_cloud);
-    pcl_conversions::fromPCL(pcl_cloud, chugg_output);
+    std::string const base_frame = cloud->header.frame_id;
+    chugg_cloud_->header.frame_id = base_frame;
 
-    chugg_pub_.publish( chugg_output);
+    /// Uses SVD internally for transformation estimation
+    pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
+	    
+    /// Estimate the transformation on our arm model that will align it with the sensor point cloud
+
+    /// Setting CHUGG as the source means that we only look for correspondences for points on CHUGG
+    /// i.e., for each point on CHUGG, we find the closest point in the sensor cloud
+    /// but we don't try to find correspondences for all points in the sensor cloud
+    icp.setInputSource( chugg_cloud_ );
+    icp.setInputTarget( cloud );
+    
+    // Set the max correspondence distance to 5cm (e.g., correspondences with higher distances will be ignored)
+    // icp.setMaxCorrespondenceDistance (icp_config_->max_correspondence_distance);
+    icp.setMaximumIterations (500);
+    // icp.setTransformationEpsilon (icp_config_->transformation_epsilon);
+    // icp.setEuclideanFitnessEpsilon (icp_config_->euclidian_fitness_epsilon);
+
+    _CloudXYZ icp_output;
+
+    /// Uses Identity as an initial guess for the transform
+    icp.align( icp_output );
+
+    ROS_INFO("ICP status: [converged: %d], [fitness: %f].", icp.hasConverged(), icp.getFitnessScore() );
+    Eigen::Matrix4f transformation = icp.getFinalTransformation();
+    
+    // pcl::toPCLPointCloud2(chugg_cloud_, pcl_cloud);
+    // pcl_conversions::fromPCL(pcl_cloud, chugg_output);
+    if( icp.hasConverged())
+      {
+	chugg_pub_.publish(icp_output);
+      }
+    
+    debug_pub_.publish(*chugg_cloud_);
   }
 
 };
