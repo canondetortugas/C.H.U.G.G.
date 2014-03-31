@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<robot name="chugg">
+
+  <!-- Center of cube, not center of mass -->
+  <link name="chugg/body/center">
+    <visual name="chugg_visual" >
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <geometry name="chugg_geometry">
+	<mesh filename="package://chugg_launch/params/chugg.STL" />
+      </geometry>
+    </visual>
+  </link>
+
+</robot>

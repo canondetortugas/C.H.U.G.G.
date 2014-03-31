@@ -44,6 +44,7 @@
 
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_datatypes.h>
+#include <geometry_msgs/Vector3.h>
 
 // uscauv
 #include <uscauv_common/base_node.h>
@@ -58,13 +59,14 @@ class ChuggTrackerNode: public BaseNode
 {
 private:
   ros::NodeHandle nh_rel_;
+  ros::Publisher filter_rpy_pub_;
   ros::Subscriber marker_sub_;
   tf::TransformBroadcaster br_;
   
-  
+  tf::Transform filtered_;
 
  public:
-  ChuggTrackerNode(): BaseNode("ChuggTracker"), nh_rel_("~")
+  ChuggTrackerNode(): BaseNode("ChuggTracker"), nh_rel_("~"), filtered_( tf::Transform::getIdentity() )
    {
    }
 
@@ -73,14 +75,30 @@ private:
   // Running spin() will cause this function to be called before the node begins looping the spinOnce() function.
   void spinFirst()
      {
-    
        marker_sub_ = nh_rel_.subscribe<_AlvarMarkers>("markers_in", 1, &ChuggTrackerNode::markerCallback, this);
-     }  
+
+       filter_rpy_pub_ = nh_rel_.advertise<geometry_msgs::Vector3>("filter/rpy", 1);
+     }
 
   // Running spin() will cause this function to get called at the loop rate until this node is killed.
   void spinOnce()
      {
+       
 
+       /// convert filtered orientation to RPY and publish
+       double roll, pitch, yaw;
+       filtered_.getBasis().getRPY(roll, pitch, yaw);
+       geometry_msgs::Vector3 euler;
+       euler.x = roll;
+       euler.y = pitch;
+       euler.z = yaw;
+       filter_rpy_pub_.publish(euler);
+
+       tf::StampedTransform filtered_tf( filtered_, ros::Time::now(), "/camera_link", "chugg/pose/filter"),
+	 filtered_quat( tf::Transform(filtered_.getRotation()), ros::Time::now(), "/camera_link", "chugg/ori/filter");
+       
+       br_.sendTransform(filtered_tf);
+       br_.sendTransform(filtered_quat);
      }
 
   void markerCallback( _AlvarMarkers::ConstPtr const & msg)
@@ -99,6 +117,9 @@ private:
     tf::Stamped<tf::Transform> marker_to_world;
     tf::poseStampedMsgToTF( marker.pose, marker_to_world );
     marker_to_world.stamp_ = marker.header.stamp;
+    
+    /// TODO: Use this instead of hard-coding /camera_link
+    std::string const marker_parent = marker.header.frame_id;
 
     std::vector<tf::StampedTransform> output;
     
@@ -110,6 +131,9 @@ private:
     output.push_back(marker_to_world_quat);
     
     br_.sendTransform(output);
+
+    /// TODO: real filtering
+    filtered_ = marker_to_world_tf;
   }
 
 };
