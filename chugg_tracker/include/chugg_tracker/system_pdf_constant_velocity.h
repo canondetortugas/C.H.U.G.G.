@@ -1,0 +1,116 @@
+/***************************************************************************
+ *  include/chugg_tracker/system_pdf_constant_velocity.h
+ *  --------------------
+ *
+ *  Software License Agreement (BSD License)
+ *
+ *  Copyright (c) 2014, Dylan Foster (turtlecannon@gmail.com)
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions are
+ *  met:
+ *
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above
+ *    copyright notice, this list of conditions and the following disclaimer
+ *    in the documentation and/or other materials provided with the
+ *    distribution.
+ *  * Neither the name of CHUGG nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ *  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ *  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ **************************************************************************/
+
+
+#ifndef CHUGG_CHUGGTRACKER_SYSTEMPDFCONSTANTVELOCITY
+#define CHUGG_CHUGGTRACKER_SYSTEMPDFCONSTANTVELOCITY
+
+// ROS
+#include <ros/ros.h>
+
+/// BFL
+#include <pdf/conditionalpdf.h>
+#include <pdf/gaussian.h>
+
+#include <model/systemmodel.h>
+#include <model/measurementmodel.h>
+
+namespace chugg
+{
+
+  class SystemPDFConstantVelocity: public BFL::ConditionalPdf<MatrixWrapper::ColumnVector, MatrixWrapper::ColumnVector>
+   {
+   private:
+     BFL::Gaussian ori_noise_;
+     double dt_;
+    
+    public:
+     SystemPDFConstantVelocity(BFL::Gaussian const & ori_noise, double const & dt):
+       /// Args: System dimensions (7), Control input dimensions (0)
+       BFL::ConditionalPdf<MatrixWrapper::ColumnVector, MatrixWrapper::ColumnVector>(7, 0),
+       ori_noise_(ori_noise),
+       dt_(dt)
+       {}
+     ~SystemPDFConstantVelocity();
+
+     /// Ideally, we should use a variable dt based on the real time since the last predict, but BFL doesn't have
+     /// a great way to pass this info around
+     virtual bool SampleFrom (BFL::Sample<MatrixWrapper::ColumnVector>& one_sample, int method=DEFAULT, void * args=NULL) const
+     {
+       /// Inherited from ConditionalPDF. 0th argument is always old state. arg 1 would be control input if we had it
+       MatrixWrapper::ColumnVector state = ConditionalArgumentGet(0);
+       /// Interpret state as  quat: (w, x, y, z), twist: (x,y,z)
+
+       tf::Quaternion const ori = stateToQuat(state);
+       /// current orientation perturbed by gaussian noise
+       tf::Quaternion const noisy = sampleQuat() * ori;
+
+       state(0) = noisy.getW();
+       state(1) = noisy.getX();
+       state(2) = noisy.getY();
+       state(3) = noisy.getZ();
+       
+       one_sample.ValueSet(state);
+
+       /// the internet said I should do this, not sure why
+       return true;
+     }
+
+   private:
+
+     inline tf::Quaternion stateToQuat(MatrixWrapper::ColumnVector const & state) const
+     {
+       return tf::Quaternion(state(1), state(2), state(3), state(0));
+     }
+
+     tf::Quaternion sampleQuat() const
+     {
+       BFL::Sample<MatrixWrapper::ColumnVector> noise;
+       ori_noise_.SampleFrom(noise, DEFAULT, NULL);
+       MatrixWrapper::ColumnVector ncv = noise.ValueGet();
+       tf::Vector3 nv( ncv(0), ncv(1), ncv(2));
+       double norm = nv.length();
+       
+       return tf::Quaternion( nv.normalized(), norm )
+     }
+
+        
+  };
+    
+} // chugg
+
+#endif // CHUGG_CHUGGTRACKER_SYSTEMPDFCONSTANTVELOCITY

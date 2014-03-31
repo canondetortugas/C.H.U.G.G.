@@ -83,8 +83,6 @@ private:
   // Running spin() will cause this function to get called at the loop rate until this node is killed.
   void spinOnce()
      {
-       
-
        /// convert filtered orientation to RPY and publish
        double roll, pitch, yaw;
        filtered_.getBasis().getRPY(roll, pitch, yaw);
@@ -93,14 +91,14 @@ private:
        euler.y = pitch;
        euler.z = yaw;
        filter_rpy_pub_.publish(euler);
-
+       
        tf::StampedTransform filtered_tf( filtered_, ros::Time::now(), "/camera_link", "chugg/pose/filter"),
 	 filtered_quat( tf::Transform(filtered_.getRotation()), ros::Time::now(), "/camera_link", "chugg/ori/filter");
        
        br_.sendTransform(filtered_tf);
        br_.sendTransform(filtered_quat);
      }
-
+  
   void markerCallback( _AlvarMarkers::ConstPtr const & msg)
   {
     if( msg-> markers.size() < 1)
