@@ -69,15 +69,21 @@ namespace chugg
 
      /// Ideally, we should use a variable dt based on the real time since the last predict, but BFL doesn't have
      /// a great way to pass this info around
+     /// TODO: Add noisiness to velocity, add velocity covariance
      virtual bool SampleFrom (BFL::Sample<MatrixWrapper::ColumnVector>& one_sample, int method=DEFAULT, void * args=NULL) const
      {
        /// Inherited from ConditionalPDF. 0th argument is always old state. arg 1 would be control input if we had it
        MatrixWrapper::ColumnVector state = ConditionalArgumentGet(0);
        /// Interpret state as  quat: (w, x, y, z), twist: (x,y,z)
+       tf::Vector3 const vel(state(4), state(5), state(6));
+       double const angle = vel.length()*dt_;
+       /// Change in quaternion due to velocity
+       tf::Quaternion const deltaq = tf::Quaternion( vel.normalized(), angle);
 
        tf::Quaternion const ori = stateToQuat(state);
-       /// current orientation perturbed by gaussian noise
-       tf::Quaternion const noisy = sampleQuat() * ori;
+       /// Take current orientation and integrate velocity (deltaq), then perturb by gaussian noise
+       /// TODO: Make sure order of operations on this is correct
+       tf::Quaternion const noisy = sampleQuat() * deltaq * ori;
 
        state(0) = noisy.getW();
        state(1) = noisy.getX();
@@ -107,8 +113,6 @@ namespace chugg
        
        return tf::Quaternion( nv.normalized(), norm )
      }
-
-        
   };
     
 } // chugg

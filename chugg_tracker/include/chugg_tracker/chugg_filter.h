@@ -61,12 +61,13 @@
 namespace chugg
 {
   
-
+  /// TODO: Add a service to reset the filter's state
   class ChuggFilter: public MultiReconfigure
   {
   private:
     typedef chugg_tracker::ChuggFilterConfig _Config;
     typedef BFL::SystemModel<MatrixWrapper::ColumnVector> _SystemModel;
+    typedef BFL::Measurement<MatrixWrapper::ColumnVector, MatrixWrapper::ColumnVector> _MeasurementModel;
     
   private:
     _Config * config_;
@@ -75,18 +76,23 @@ namespace chugg
 
     std::shared_ptr<chugg::SystemPDFConstantVelocity> system_pdf_;
     std::shared_ptr<_SystemModel> system_;
+
+    std::shared_ptr<chugg::MarkerMeasurementPDF> marker_measurement_pdf_;
+    std::shared_ptr<_MeasurementModel> marker_measurement_;
     
   public:
     ChuggFilter(double const & dt): dt_(dt)
     {
       addReconfigureServer<_Config>("filter", &ChuggFilter::reconfigureCallback, this);
       config_ = &getLatestConfig<_Config>("filter");
-    }
 
+      initalizeFilter();
+    }
+    
     /// make a prediction based on constant velocity model
     void predict()
     {
-      
+      /// TODO: Call bootstrap filter predict using system_pdf_
     }
 
     /// Incorporate measurement from ar marker tracker
@@ -103,6 +109,11 @@ namespace chugg
   private:
     void reconfigureCallback( _Config const & config )
     {
+
+      ////////////////////////////////////////////////////////
+      // Set up system PDF////////////////////////////////////
+      ////////////////////////////////////////////////////////
+
       /// Use 3D gaussian to sample rotations - even though we represent them as 4D quaternions they only have 3 DOF
       
       MatrixWrapper::ColumnVector ori_system_noise_mean(3);
@@ -131,11 +142,36 @@ namespace chugg
 	system_ = std::make_shared<_SystemModel>( system_pdf_.get() );
       else
 	*system_ = _SystemModel( system_pdf_.get() );
-      
+
+      ////////////////////////////////////////////////////////
+      /// Set up measurement PDF
+      ////////////////////////////////////////////////////////
+      MatrixWrapper::ColumnVector marker_measurement_mean(1);
+      marker_measurement_mean = 0.0;
+
+      MatrixWrapper::SymmetricMatrix marker_measurement_cov(1);
+      marker_measurement_cov = config.marker_cov;
+
+      BFL::Gaussian marker_measurement_noise(marker_measurement_mean, marker_measurement_cov);
+
+      if( !marker_measurement_pdf_ )
+	marker_measurement_pdf_ = std::make_shared<chugg::MarkerMeasurementPDF>( marker_measurement_noise );
+      else
+	*marker_measurement_pdf_ = chugg::MarkerMeasurementPDF( marker_measurement_noise );
+      if( !marker_measurement_ )
+	marker_measurement_ = std::make_shared<_MeasurementModel>( marker_measurement_pdf_.get() );
+      else
+	*marker_measurement_ = _MeasurementModel( marker_measurement_pdf_.get() );
       
       
     }
-     
+
+    void initializeFilter()
+    {
+      /// TODO: Set prior and initialize bootstrap filter
+
+    }
+
   };
     
 } // chugg

@@ -45,14 +45,37 @@
 namespace chugg
 {
 
-   class MarkerMeasurementPdf
+  class MarkerMeasurementPDF: public BFL::ConditionalPdf<MatrixWrapper::ColumnVector, MatrixWrapper::ColumnVector>
    {
  
     private:
+     BFL::Gaussian noise_;
     
     public:
-      MarkerMeasurementPdf()
+     MarkerMeasurementPDF(BFL::Gaussian const & noise):
+       /// 7 arguments for state, 4 arguments for orientation measurement
+       /// The measurement is conditioned on the state vector, which is why the
+       /// measurement dimension is given first.
+       BFL::ConditionalPdf<MatrixWrapper::ColumnVector, MatrixWrapper::ColumnVector>(4, 7),
+       noise_(noise)
        {}
+     
+     virtual ~MarkerMeasurementPDF();
+
+     // implement this virtual function for measurement model of a particle filter
+     virtual BFL::Probability ProbabilityGet(const MatrixWrapper::ColumnVector& measurement) const
+     {
+       /// Taking it for granted that argument 0 is actually state. docs are unclear on this
+       MatrixWrapper::ColumnVector state = ConditionalArgumentGet(0);
+       
+       /// Interpret state as  quat: (w, x, y, z), twist: (x,y,z)
+       tf::Quaternion ori( state(1), state(2), state(3), state(0));
+       tf::Quaternion meas( measurement(1), measurement(2), measurement(3), measurement(0)); 
+       
+       /// TODO: Velocity probability: Gaussian on difference between velocity and difference between state and measurement.
+       /// Need delta t between last update and measurement to deal with this
+       
+     }
         
     };
     
