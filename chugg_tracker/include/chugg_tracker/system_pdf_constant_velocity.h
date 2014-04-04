@@ -75,7 +75,7 @@ namespace chugg
        /// Inherited from ConditionalPDF. 0th argument is always old state. arg 1 would be control input if we had it
        MatrixWrapper::ColumnVector state = ConditionalArgumentGet(0);
        /// Interpret state as  quat: (w, x, y, z), twist: (x,y,z)
-       tf::Vector3 const vel(state(4), state(5), state(6));
+       tf::Vector3 const vel(state(5), state(6), state(7));
        double const angle = vel.length()*dt_;
        /// Change in quaternion due to velocity
        tf::Quaternion const deltaq = tf::Quaternion( vel.normalized(), angle);
@@ -85,10 +85,15 @@ namespace chugg
        /// TODO: Make sure order of operations on this is correct
        tf::Quaternion const noisy = sampleQuat() * deltaq * ori;
 
-       state(0) = noisy.getW();
-       state(1) = noisy.getX();
-       state(2) = noisy.getY();
-       state(3) = noisy.getZ();
+       state(1) = noisy.getW();
+       state(2) = noisy.getX();
+       state(3) = noisy.getY();
+       state(4) = noisy.getZ();
+
+       MatrixWrapper::ColumnVector const vel_noise = getVelocityNoise();
+       state(5) += vel_noise(1);
+       state(6) += vel_noise(2);
+       state(7) += vel_noise(3);
        
        one_sample.ValueSet(state);
 
@@ -100,19 +105,36 @@ namespace chugg
 
      inline tf::Quaternion stateToQuat(MatrixWrapper::ColumnVector const & state) const
      {
-       return tf::Quaternion(state(1), state(2), state(3), state(0));
+       /// MatrixWrapper classes are indexed starting at 0
+       return tf::Quaternion(state(2), state(3), state(4), state(1));
      }
 
      tf::Quaternion sampleQuat() const
      {
+       /// first 3 values are from distribution on orientation
        BFL::Sample<MatrixWrapper::ColumnVector> noise;
        ori_noise_.SampleFrom(noise, DEFAULT, NULL);
        MatrixWrapper::ColumnVector ncv = noise.ValueGet();
-       tf::Vector3 nv( ncv(0), ncv(1), ncv(2));
+       tf::Vector3 nv( ncv(1), ncv(2), ncv(3));
        double norm = nv.length();
        
        return tf::Quaternion( nv.normalized(), norm )
      }
+
+     MatrixWrapper::ColumnVector getVelocityNoise() const
+     {
+       BFL::Sample<MatrixWrapper::ColumnVector> noise;
+       ori_noise_.SampleFrom(noise, DEFAULT, NULL);
+       MatrixWrapper::ColumnVector ncv = noise.ValueGet();
+       
+       MatrixWrapper::ColumnVector output(3);
+       
+       output(1) = ncv(4);
+       output(2) = ncv(5);
+       output(3) = ncv(6);
+       return output;
+     }
+     
   };
     
 } // chugg

@@ -116,20 +116,18 @@ namespace chugg
 
       /// Use 3D gaussian to sample rotations - even though we represent them as 4D quaternions they only have 3 DOF
       
-      MatrixWrapper::ColumnVector ori_system_noise_mean(3);
+      MatrixWrapper::ColumnVector ori_system_noise_mean(6);
       ori_system_noise_mean = 0.0;
 
-      MatrixWrapper::SymmetricMatrix ori_system_noise_cov(3);
+      /// First half is covariance for orientation, second is for angular velocity. They are uncorrelated
+      MatrixWrapper::SymmetricMatrix ori_system_noise_cov(6);
       ori_system_noise_cov = 0.0;
-      ori_system_noise_cov(1,1) = config.predict_cov;
-      ori_system_noise_cov(1,2) = 0.0;
-      ori_system_noise_cov(1,3) = 0.0;
-      ori_system_noise_cov(2,1) = 0.0;
-      ori_system_noise_cov(2,2) = config.predict_cov;
-      ori_system_noise_cov(2,3) = 0.0;
-      ori_system_noise_cov(3,1) = 0.0;
-      ori_system_noise_cov(3,2) = 0.0;
-      ori_system_noise_cov(3,3) = config.predict_cov;
+      ori_system_noise_cov(1,1) = config.system_ori_cov;
+      ori_system_noise_cov(2,2) = config.system_ori_cov;
+      ori_system_noise_cov(3,3) = config.system_ori_cov;
+      ori_system_noise_cov(4,4) = config.system_ori_vel_cov;
+      ori_system_noise_cov(5,5) = config.system_ori_vel_cov;
+      ori_system_noise_cov(6,6) = config.system_ori_vel_cov;
 
       BFL::Gaussian ori_system_noise(ori_system_noise_mean, ori_system_noise_cov);
 
@@ -146,11 +144,13 @@ namespace chugg
       ////////////////////////////////////////////////////////
       /// Set up measurement PDF
       ////////////////////////////////////////////////////////
-      MatrixWrapper::ColumnVector marker_measurement_mean(1);
+      MatrixWrapper::ColumnVector marker_measurement_mean(2);
       marker_measurement_mean = 0.0;
 
-      MatrixWrapper::SymmetricMatrix marker_measurement_cov(1);
-      marker_measurement_cov = config.marker_cov;
+      MatrixWrapper::SymmetricMatrix marker_measurement_cov(2);
+      marker_measurement_cov = 0.0;
+      marker_measurement_cov(1,1) = config.marker_ori_cov;
+      marker_measurement_cov(2,2) = config.marker_ori_vel_cov;
 
       BFL::Gaussian marker_measurement_noise(marker_measurement_mean, marker_measurement_cov);
 

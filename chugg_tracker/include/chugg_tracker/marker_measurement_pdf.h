@@ -69,8 +69,9 @@ namespace chugg
        MatrixWrapper::ColumnVector state = ConditionalArgumentGet(0);
        
        /// Interpret state as  quat: (w, x, y, z), twist: (x,y,z)
-       tf::Quaternion ori( state(1), state(2), state(3), state(0));
-       tf::Quaternion meas( measurement(1), measurement(2), measurement(3), measurement(0)); 
+       tf::Quaternion ori( state(2), state(3), state(4), state(1));
+       tf::Quaternion meas( measurement(2), measurement(3), measurement(4), measurement(1));
+       tf::Vector3 vel( state(5), state(6), state(7));
        
        /// TODO: Velocity probability: Gaussian on difference between velocity and difference between state and measurement.
        /// Need delta t between last update and measurement to deal with this
