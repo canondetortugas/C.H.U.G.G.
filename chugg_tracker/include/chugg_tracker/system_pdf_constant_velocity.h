@@ -60,8 +60,8 @@ namespace chugg
     
   public:
     SystemPDFConstantVelocity(BFL::Gaussian const & ori_noise):
-      /// Args: System dimensions (7), Control input dimensions (1) (for dummy input)
-      BFL::ConditionalPdf<MatrixWrapper::ColumnVector, MatrixWrapper::ColumnVector>(7, 1),
+      /// Args: System dimensions (7), Conditional arguments (2) (1 for previous state, 1 for dummy control input)
+      BFL::ConditionalPdf<MatrixWrapper::ColumnVector, MatrixWrapper::ColumnVector>(7, 2),
       ori_noise_(ori_noise)
     {}
     ~SystemPDFConstantVelocity(){};
@@ -75,6 +75,7 @@ namespace chugg
       /// Inherited from ConditionalPDF. 0th argument is always old state. arg 1 is "control input" 
       MatrixWrapper::ColumnVector state = ConditionalArgumentGet(0);
       MatrixWrapper::ColumnVector input = ConditionalArgumentGet(1);
+
       double const dt = input(1);
       /// Interpret state as  quat: (w, x, y, z), twist: (x,y,z)
       tf::Vector3 const vel(state(5), state(6), state(7));

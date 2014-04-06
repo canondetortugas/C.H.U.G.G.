@@ -6,7 +6,7 @@
 
   <!-- TODO: Get an STL file for CHUGG so that this works -->
   <!-- <param name="robot_description" textfile="$(find chugg_launch)/params/chugg.urdf" /> -->
-  <!-- <\!-- This node will publish the static transforms in the URDF file above -\-> -->
+  <!-- This node will publish the static transforms in the URDF file above -->
   <!-- <node pkg="robot_state_publisher" type="robot_state_publisher" name="$(arg robot)_structures_publisher" /> -->
   <!-- <node name="filter_to_robot_tf" type="static_transform_publisher" pkg="tf" args="0 0 0 0 0 0 /chugg/pose/filter /chugg/body/center 100" /> -->
 

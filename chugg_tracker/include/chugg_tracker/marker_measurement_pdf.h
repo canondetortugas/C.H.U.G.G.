@@ -60,11 +60,9 @@ namespace chugg
 
     public:
      MarkerMeasurementPDF(BFL::Gaussian const & noise):
-       /// 7 arguments for state, 4 arguments for orientation measurement
-       /// The measurement is conditioned on the state vector, which is why the
-       /// measurement dimension is given first.
-       /// Note: We actually use 5 measurement args because we pass in dt as the 5th arg.
-       BFL::ConditionalPdf<MatrixWrapper::ColumnVector, MatrixWrapper::ColumnVector>(5, 7),
+       /// Arg 1 is dimensions of the z in p(z | x). Arg 2 is the number of arguments after the |
+       /// NOT the dimension of these arguments. I.E. we only pass one state vector, so we pass a 1.
+       BFL::ConditionalPdf<MatrixWrapper::ColumnVector, MatrixWrapper::ColumnVector>(5, 1),
        noise_(noise)
        {}
      
@@ -94,7 +92,7 @@ namespace chugg
        tf::Quaternion meas( measurement(2), measurement(3), measurement(4), measurement(1));
        tf::Vector3 vel( state(5), state(6), state(7));
 
-       MatrixWrapper::ColumnVector arg;
+       MatrixWrapper::ColumnVector arg(2);
 
        double const d = quatDistance(ori, meas);
        arg(1) = d;

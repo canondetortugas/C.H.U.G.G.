@@ -80,7 +80,7 @@ namespace chugg
     typedef BFL::BootstrapFilter<MatrixWrapper::ColumnVector, MatrixWrapper::ColumnVector> _Filter;
     
   private:
-    _Config * config_;
+    _Config config_;
     
     std::shared_ptr<chugg::SystemPDFConstantVelocity> system_pdf_;
     std::shared_ptr<_SystemModel> system_;
@@ -101,8 +101,6 @@ namespace chugg
 		   last_sample_count_(0)
     {
       addReconfigureServer<_Config>("filter", &ChuggFilter::reconfigureCallback, this);
-      config_ = &getLatestConfig<_Config>("filter");
-
     }
     
     /// make a prediction based on constant velocity model
@@ -155,6 +153,7 @@ namespace chugg
   private:
     void reconfigureCallback( _Config const & config )
     {
+      config_ = config;
 
       ////////////////////////////////////////////////////////
       // Set up system PDF////////////////////////////////////
@@ -244,34 +243,34 @@ namespace chugg
       
       SymmetricMatrix vel_cov(3);
       vel_cov = 0.0;
-      vel_cov(1, 1) = config_->prior_ori_vel_cov;
-      vel_cov(2, 2) = config_->prior_ori_vel_cov;
-      vel_cov(3, 3) = config_->prior_ori_vel_cov;
+      vel_cov(1, 1) = config_.prior_ori_vel_cov;
+      vel_cov(2, 2) = config_.prior_ori_vel_cov;
+      vel_cov(3, 3) = config_.prior_ori_vel_cov;
       
       BFL::Gaussian vel_prior(vel_mean, vel_cov);
       
       if( !prior_ )
 	{
-	  prior_ = std::make_shared<BFL::MCPdf<ColumnVector> >(config_->samples, 7);
+	  prior_ = std::make_shared<BFL::MCPdf<ColumnVector> >(config_.samples, 7);
 	}
       else
 	{
-	  *prior_ = BFL::MCPdf<ColumnVector>(config_->samples, 7);
+	  *prior_ = BFL::MCPdf<ColumnVector>(config_.samples, 7);
 	}
 
       /// What we do here: Get N RPY samples from a uniform distribution and N angular vel samples from a
       /// gaussian distribution. We then convert the RPY samples into quats, combine these and the vel samples
       /// into single vectors, then use these vectors to initialize the prior distribution
     
-      std::vector<BFL::Sample<ColumnVector> > ori_samples(config_->samples), vel_samples( config_->samples), 
-	combined_samples(config_->samples);
+      std::vector<BFL::Sample<ColumnVector> > ori_samples(config_.samples), vel_samples( config_.samples), 
+	combined_samples(config_.samples);
     
-      ori_prior.SampleFrom(ori_samples, config_->samples, DEFAULT);
-      vel_prior.SampleFrom(vel_samples, config_->samples, DEFAULT);
+      ori_prior.SampleFrom(ori_samples, config_.samples, DEFAULT);
+      vel_prior.SampleFrom(vel_samples, config_.samples, DEFAULT);
       
-      for( size_t idx = 0; idx < config_->samples; ++idx )
+      for( size_t idx = 0; idx < config_.samples; ++idx )
 	{
-	  BFL::Sample<ColumnVector> sample;
+	  BFL::Sample<ColumnVector> sample(7);
 	  ColumnVector sample_val(7);
 
 	  ColumnVector const & ori_sample = ori_samples[idx].ValueGet();
@@ -290,7 +289,7 @@ namespace chugg
 	  sample_val(7) = vel_sample(3);
 	  
 	  sample.ValueSet(sample_val);
-	  combined_samples.push_back(sample);
+	  combined_samples[idx] = sample;
 	}
     
       prior_->ListOfSamplesSet(combined_samples);
@@ -298,9 +297,9 @@ namespace chugg
       /// I believe that the third parameter is the number of effective samples that we have to drop below
       /// before we resample
       if( !filter_ )
-	filter_ = std::make_shared<_Filter>( prior_.get(), 0, double(config_->samples/4.0), DEFAULT_RS);
+	filter_ = std::make_shared<_Filter>( prior_.get(), 0, double(config_.samples/4.0), DEFAULT_RS);
       else
-	*filter_ = _Filter( prior_.get(), 0, double(config_->samples/4.0), DEFAULT_RS);
+	*filter_ = _Filter( prior_.get(), 0, double(config_.samples/4.0), DEFAULT_RS);
       
     }
     
