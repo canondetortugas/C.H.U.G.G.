@@ -41,6 +41,7 @@
 
 // ROS
 #include <ros/ros.h>
+#include <tf/transform_datatypes.h>
 
 /// BFL
 #include <pdf/conditionalpdf.h>
@@ -56,34 +57,34 @@ namespace chugg
    {
    private:
      BFL::Gaussian ori_noise_;
-     double dt_;
     
     public:
-     SystemPDFConstantVelocity(BFL::Gaussian const & ori_noise, double const & dt):
-       /// Args: System dimensions (7), Control input dimensions (0)
-       BFL::ConditionalPdf<MatrixWrapper::ColumnVector, MatrixWrapper::ColumnVector>(7, 0),
-       ori_noise_(ori_noise),
-       dt_(dt)
-       {}
+     SystemPDFConstantVelocity(BFL::Gaussian const & ori_noise):
+       /// Args: System dimensions (7), Control input dimensions (1) (for dummy input)
+       BFL::ConditionalPdf<MatrixWrapper::ColumnVector, MatrixWrapper::ColumnVector>(7, 1),
+       ori_noise_(ori_noise)
+     {}
      ~SystemPDFConstantVelocity();
 
-     /// Ideally, we should use a variable dt based on the real time since the last predict, but BFL doesn't have
-     /// a great way to pass this info around
-     /// TODO: Add noisiness to velocity, add velocity covariance
+     /**
+      * This is a system model with no inputs. However, we use a dummy input to pass the dt since the last
+      * prediction in
+      */
      virtual bool SampleFrom (BFL::Sample<MatrixWrapper::ColumnVector>& one_sample, int method=DEFAULT, void * args=NULL) const
      {
-       /// Inherited from ConditionalPDF. 0th argument is always old state. arg 1 would be control input if we had it
+       /// Inherited from ConditionalPDF. 0th argument is always old state. arg 1 is "control input" 
        MatrixWrapper::ColumnVector state = ConditionalArgumentGet(0);
+       MatrixWrapper::ColumnVector input = ConditionalArgumentGet(1);
+       double const dt = input(1);
        /// Interpret state as  quat: (w, x, y, z), twist: (x,y,z)
        tf::Vector3 const vel(state(5), state(6), state(7));
-       double const angle = vel.length()*dt_;
+       double const angle = vel.length()*dt;
        /// Change in quaternion due to velocity
        tf::Quaternion const deltaq = tf::Quaternion( vel.normalized(), angle);
 
        tf::Quaternion const ori = stateToQuat(state);
        /// Take current orientation and integrate velocity (deltaq), then perturb by gaussian noise
-       /// TODO: Make sure order of operations on this is correct
-       tf::Quaternion const noisy = sampleQuat() * deltaq * ori;
+       tf::Quaternion const noisy = ori * deltaq * sampleQuat();
 
        state(1) = noisy.getW();
        state(2) = noisy.getX();
@@ -118,7 +119,7 @@ namespace chugg
        tf::Vector3 nv( ncv(1), ncv(2), ncv(3));
        double norm = nv.length();
        
-       return tf::Quaternion( nv.normalized(), norm )
+       return tf::Quaternion( nv.normalized(), norm );
      }
 
      MatrixWrapper::ColumnVector getVelocityNoise() const

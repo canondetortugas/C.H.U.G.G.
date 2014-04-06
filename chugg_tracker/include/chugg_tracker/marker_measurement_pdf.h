@@ -41,6 +41,14 @@
 
 // ROS
 #include <ros/ros.h>
+#include <tf/transform_datatypes.h>
+
+
+#include <cmath>
+
+/// BFL
+#include <pdf/conditionalpdf.h>
+#include <pdf/gaussian.h>
 
 namespace chugg
 {
@@ -50,32 +58,56 @@ namespace chugg
  
     private:
      BFL::Gaussian noise_;
-    
+
     public:
      MarkerMeasurementPDF(BFL::Gaussian const & noise):
        /// 7 arguments for state, 4 arguments for orientation measurement
        /// The measurement is conditioned on the state vector, which is why the
        /// measurement dimension is given first.
-       BFL::ConditionalPdf<MatrixWrapper::ColumnVector, MatrixWrapper::ColumnVector>(4, 7),
+       /// Note: We actually use 5 measurement args because we pass in dt as the 5th arg.
+       BFL::ConditionalPdf<MatrixWrapper::ColumnVector, MatrixWrapper::ColumnVector>(5, 7),
        noise_(noise)
        {}
      
      virtual ~MarkerMeasurementPDF();
 
-     // implement this virtual function for measurement model of a particle filter
+     /** 
+      * Since we don't directly measure velocity, PDF only incorporates the velocities of particles
+      * implicitly. The idea is that if we make a prediction at the same instant as we measure
+      * orientation, the accuracy of our velocity estimate is reflected in the accuracy of our orientation
+      * estimate. Consider a simpler example with linear position and velocity: If our velocity estimate is too high
+      * we would expect to predict a position greater than the measurement. If the velocity estimate is too low,
+      * we would expect a position smaller than the measurement. arg(2) incorporates this idea by using the
+      * distance between our orientation estimate and measurement divided by the dt between measurement updates. The idea here is
+      * that the longer the time between measurement updates, the more the error in velocity will accumulate in our pose estimate.
+      * Weighting by 1/dt removes this effect.
+      * NOTE: For this to work, it's imperative that we make a prediction at the same instant as we incorporate a measurement.
+      * 
+      */
      virtual BFL::Probability ProbabilityGet(const MatrixWrapper::ColumnVector& measurement) const
      {
        /// Taking it for granted that argument 0 is actually state. docs are unclear on this
        MatrixWrapper::ColumnVector state = ConditionalArgumentGet(0);
        
+       double const dt = measurement(5);
        /// Interpret state as  quat: (w, x, y, z), twist: (x,y,z)
        tf::Quaternion ori( state(2), state(3), state(4), state(1));
        tf::Quaternion meas( measurement(2), measurement(3), measurement(4), measurement(1));
        tf::Vector3 vel( state(5), state(6), state(7));
+
+       MatrixWrapper::ColumnVector arg;
+
+       double const d = quatDistance(ori, meas);
+       arg(1) = d;
+       arg(2) = d/dt;
        
-       /// TODO: Velocity probability: Gaussian on difference between velocity and difference between state and measurement.
-       /// Need delta t between last update and measurement to deal with this
-       
+       return noise_.ProbabilityGet( arg );
+     }
+
+     /// implements distance metric on SO(3): arccos(|q1.q2])
+     double quatDistance(tf::Quaternion const & q1, tf::Quaternion const & q2) const 
+     {
+       return acos( abs( q1.dot(q2) ) );
      }
         
     };

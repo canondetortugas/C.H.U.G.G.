@@ -52,6 +52,9 @@
 /// ALVAR
 #include <ar_track_alvar/AlvarMarkers.h>
 
+/// CHUGG
+#include <chugg_tracker/chugg_filter.h>
+
 typedef ar_track_alvar::AlvarMarker _AlvarMarker;
 typedef ar_track_alvar::AlvarMarkers _AlvarMarkers;
 
@@ -64,6 +67,8 @@ private:
   tf::TransformBroadcaster br_;
   
   tf::Transform filtered_;
+
+  chugg::ChuggFilter filter_;
 
  public:
   ChuggTrackerNode(): BaseNode("ChuggTracker"), nh_rel_("~"), filtered_( tf::Transform::getIdentity() )
@@ -83,6 +88,9 @@ private:
   // Running spin() will cause this function to get called at the loop rate until this node is killed.
   void spinOnce()
      {
+       /// Predict
+       filter_.predict();
+
        /// convert filtered orientation to RPY and publish
        double roll, pitch, yaw;
        filtered_.getBasis().getRPY(roll, pitch, yaw);
@@ -121,15 +129,24 @@ private:
 
     std::vector<tf::StampedTransform> output;
     
+    tf::Quaternion marker_to_world_quat = marker_to_world.getRotation();
+
     tf::StampedTransform 
       marker_to_world_tf(marker_to_world, marker_to_world.stamp_, "/camera_link", "/chugg/pose/markers"),
-      marker_to_world_quat( tf::Transform(marker_to_world.getRotation()), marker_to_world.stamp_, "/camera_link", 
+      marker_to_world_rot( tf::Transform(marker_to_world.getRotation()), marker_to_world.stamp_, "/camera_link", 
 			    "/chugg/ori/markers");
     output.push_back(marker_to_world_tf);
-    output.push_back(marker_to_world_quat);
+    output.push_back(marker_to_world_rot);
     
     br_.sendTransform(output);
 
+
+    //////////////////////////////////////////////////////////
+    // Incorporate measurement into filter////////////////////
+    //////////////////////////////////////////////////////////
+    
+    filter_.updateMarkers( marker_to_world_quat );
+    
     /// TODO: real filtering
     filtered_ = marker_to_world_tf;
   }

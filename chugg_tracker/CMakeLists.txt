@@ -5,9 +5,12 @@ set(CMAKE_BUILD_TYPE Release)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS roscpp sensor_msgs uscauv_common cpp11 dynamic_reconfigure  ar_track_alvar)
+find_package(catkin REQUIRED COMPONENTS roscpp sensor_msgs uscauv_common cpp11 dynamic_reconfigure ar_track_alvar)
 
-include_directories(include ${catkin_INCLUDE_DIRS} )
+find_package(PkgConfig)
+pkg_check_modules(BFL REQUIRED bfl)
+
+include_directories(include ${catkin_INCLUDE_DIRS} ${BFL_INCLUDE_DIRS})
 
 generate_dynamic_reconfigure_options(
   cfg/ChuggFilter.cfg
@@ -15,14 +18,14 @@ generate_dynamic_reconfigure_options(
 
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES ${PROJECT_NAME}
+  LIBRARIES chugg_filter
   CATKIN_DEPENDS roscpp sensor_msgs uscauv_common cpp11 dynamic_reconfigure ar_track_alvar
   #  DEPENDS system_lib
 )
 
-add_library(${PROJECT_NAME} src/chugg_filter.cpp src/marker_measurement_pdf.cpp src/system_pdf_constant_velocity.cpp)
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
-add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_gencfg)
+add_library(chugg_filter src/chugg_filter.cpp src/marker_measurement_pdf.cpp src/system_pdf_constant_velocity.cpp)
+target_link_libraries(chugg_filter ${catkin_LIBRARIES} ${BFL_LIBRARIES})
+add_dependencies(chugg_filter ${PROJECT_NAME}_gencfg)
 
 add_executable( chugg_tracker nodes/chugg_tracker_node.cpp )
-target_link_libraries(chugg_tracker ${catkin_LIBRARIES} ${PROJECT_NAME})
+target_link_libraries(chugg_tracker ${catkin_LIBRARIES} chugg_filter ${BFL_LIBRARIES})
