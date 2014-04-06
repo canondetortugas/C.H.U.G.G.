@@ -43,7 +43,6 @@
 #include <ros/ros.h>
 #include <tf/transform_datatypes.h>
 
-
 #include <cmath>
 
 /// BFL
@@ -69,7 +68,7 @@ namespace chugg
        noise_(noise)
        {}
      
-     virtual ~MarkerMeasurementPDF();
+     virtual ~MarkerMeasurementPDF(){};
 
      /** 
       * Since we don't directly measure velocity, PDF only incorporates the velocities of particles

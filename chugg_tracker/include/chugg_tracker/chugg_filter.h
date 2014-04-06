@@ -44,6 +44,15 @@
 
 // ROS
 #include <ros/ros.h>
+#include <chugg_tracker/ChuggFilterConfig.h>
+
+/// CHUGG
+#include <chugg_tracker/system_pdf_constant_velocity.h>
+#include <chugg_tracker/marker_measurement_pdf.h>
+
+/// NOTE: BFL absolutely needs to be included after ROS packages
+/// BFL pollutes the namespace and will interfere with these packages if it is
+/// included before them
 
 /// BFL
 #include <pdf/conditionalpdf.h>
@@ -54,12 +63,6 @@
 #include <model/measurementmodel.h>
 
 #include <filter/bootstrapfilter.h>
-
-/// CHUGG
-#include <chugg_tracker/system_pdf_constant_velocity.h>
-#include <chugg_tracker/marker_measurement_pdf.h>
-
-#include <chugg_tracker/ChuggFilterConfig.h>
 
 namespace chugg
 {
@@ -295,9 +298,9 @@ namespace chugg
       /// I believe that the third parameter is the number of effective samples that we have to drop below
       /// before we resample
       if( !filter_ )
-	filter_ = std::make_shared<_Filter>( prior_.get(), 0, config_->samples/4, DEFAULT_RS);
+	filter_ = std::make_shared<_Filter>( prior_.get(), 0, double(config_->samples/4.0), DEFAULT_RS);
       else
-	*filter_ = _Filter( prior_.get(), 0, config_->samples/4, DEFAULT_RS);
+	*filter_ = _Filter( prior_.get(), 0, double(config_->samples/4.0), DEFAULT_RS);
       
     }
     

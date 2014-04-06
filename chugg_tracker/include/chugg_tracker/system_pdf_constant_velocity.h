@@ -54,87 +54,87 @@ namespace chugg
 {
 
   class SystemPDFConstantVelocity: public BFL::ConditionalPdf<MatrixWrapper::ColumnVector, MatrixWrapper::ColumnVector>
-   {
-   private:
-     BFL::Gaussian ori_noise_;
+  {
+  private:
+    BFL::Gaussian ori_noise_;
     
-    public:
-     SystemPDFConstantVelocity(BFL::Gaussian const & ori_noise):
-       /// Args: System dimensions (7), Control input dimensions (1) (for dummy input)
-       BFL::ConditionalPdf<MatrixWrapper::ColumnVector, MatrixWrapper::ColumnVector>(7, 1),
-       ori_noise_(ori_noise)
-     {}
-     ~SystemPDFConstantVelocity();
+  public:
+    SystemPDFConstantVelocity(BFL::Gaussian const & ori_noise):
+      /// Args: System dimensions (7), Control input dimensions (1) (for dummy input)
+      BFL::ConditionalPdf<MatrixWrapper::ColumnVector, MatrixWrapper::ColumnVector>(7, 1),
+      ori_noise_(ori_noise)
+    {}
+    ~SystemPDFConstantVelocity(){};
 
-     /**
-      * This is a system model with no inputs. However, we use a dummy input to pass the dt since the last
-      * prediction in
-      */
-     virtual bool SampleFrom (BFL::Sample<MatrixWrapper::ColumnVector>& one_sample, int method=DEFAULT, void * args=NULL) const
-     {
-       /// Inherited from ConditionalPDF. 0th argument is always old state. arg 1 is "control input" 
-       MatrixWrapper::ColumnVector state = ConditionalArgumentGet(0);
-       MatrixWrapper::ColumnVector input = ConditionalArgumentGet(1);
-       double const dt = input(1);
-       /// Interpret state as  quat: (w, x, y, z), twist: (x,y,z)
-       tf::Vector3 const vel(state(5), state(6), state(7));
-       double const angle = vel.length()*dt;
-       /// Change in quaternion due to velocity
-       tf::Quaternion const deltaq = tf::Quaternion( vel.normalized(), angle);
+    /**
+     * This is a system model with no inputs. However, we use a dummy input to pass the dt since the last
+     * prediction in
+     */
+    virtual bool SampleFrom (BFL::Sample<MatrixWrapper::ColumnVector>& one_sample, int method=DEFAULT, void * args=NULL) const
+    {
+      /// Inherited from ConditionalPDF. 0th argument is always old state. arg 1 is "control input" 
+      MatrixWrapper::ColumnVector state = ConditionalArgumentGet(0);
+      MatrixWrapper::ColumnVector input = ConditionalArgumentGet(1);
+      double const dt = input(1);
+      /// Interpret state as  quat: (w, x, y, z), twist: (x,y,z)
+      tf::Vector3 const vel(state(5), state(6), state(7));
+      double const angle = vel.length()*dt;
+      /// Change in quaternion due to velocity
+      tf::Quaternion const deltaq = tf::Quaternion( vel.normalized(), angle);
 
-       tf::Quaternion const ori = stateToQuat(state);
-       /// Take current orientation and integrate velocity (deltaq), then perturb by gaussian noise
-       tf::Quaternion const noisy = ori * deltaq * sampleQuat();
+      tf::Quaternion const ori = stateToQuat(state);
+      /// Take current orientation and integrate velocity (deltaq), then perturb by gaussian noise
+      tf::Quaternion const noisy = ori * deltaq * sampleQuat();
 
-       state(1) = noisy.getW();
-       state(2) = noisy.getX();
-       state(3) = noisy.getY();
-       state(4) = noisy.getZ();
+      state(1) = noisy.getW();
+      state(2) = noisy.getX();
+      state(3) = noisy.getY();
+      state(4) = noisy.getZ();
 
-       MatrixWrapper::ColumnVector const vel_noise = getVelocityNoise();
-       state(5) += vel_noise(1);
-       state(6) += vel_noise(2);
-       state(7) += vel_noise(3);
+      MatrixWrapper::ColumnVector const vel_noise = getVelocityNoise();
+      state(5) += vel_noise(1);
+      state(6) += vel_noise(2);
+      state(7) += vel_noise(3);
        
-       one_sample.ValueSet(state);
+      one_sample.ValueSet(state);
 
-       /// the internet said I should do this, not sure why
-       return true;
-     }
+      /// the internet said I should do this, not sure why
+      return true;
+    }
 
-   private:
+  private:
 
-     inline tf::Quaternion stateToQuat(MatrixWrapper::ColumnVector const & state) const
-     {
-       /// MatrixWrapper classes are indexed starting at 0
-       return tf::Quaternion(state(2), state(3), state(4), state(1));
-     }
+    inline tf::Quaternion stateToQuat(MatrixWrapper::ColumnVector const & state) const
+    {
+      /// MatrixWrapper classes are indexed starting at 0
+      return tf::Quaternion(state(2), state(3), state(4), state(1));
+    }
 
-     tf::Quaternion sampleQuat() const
-     {
-       /// first 3 values are from distribution on orientation
-       BFL::Sample<MatrixWrapper::ColumnVector> noise;
-       ori_noise_.SampleFrom(noise, DEFAULT, NULL);
-       MatrixWrapper::ColumnVector ncv = noise.ValueGet();
-       tf::Vector3 nv( ncv(1), ncv(2), ncv(3));
-       double norm = nv.length();
+    tf::Quaternion sampleQuat() const
+    {
+      /// first 3 values are from distribution on orientation
+      BFL::Sample<MatrixWrapper::ColumnVector> noise;
+      ori_noise_.SampleFrom(noise, DEFAULT, NULL);
+      MatrixWrapper::ColumnVector ncv = noise.ValueGet();
+      tf::Vector3 nv( ncv(1), ncv(2), ncv(3));
+      double norm = nv.length();
        
-       return tf::Quaternion( nv.normalized(), norm );
-     }
+      return tf::Quaternion( nv.normalized(), norm );
+    }
 
-     MatrixWrapper::ColumnVector getVelocityNoise() const
-     {
-       BFL::Sample<MatrixWrapper::ColumnVector> noise;
-       ori_noise_.SampleFrom(noise, DEFAULT, NULL);
-       MatrixWrapper::ColumnVector ncv = noise.ValueGet();
+    MatrixWrapper::ColumnVector getVelocityNoise() const
+    {
+      BFL::Sample<MatrixWrapper::ColumnVector> noise;
+      ori_noise_.SampleFrom(noise, DEFAULT, NULL);
+      MatrixWrapper::ColumnVector ncv = noise.ValueGet();
        
-       MatrixWrapper::ColumnVector output(3);
+      MatrixWrapper::ColumnVector output(3);
        
-       output(1) = ncv(4);
-       output(2) = ncv(5);
-       output(3) = ncv(6);
-       return output;
-     }
+      output(1) = ncv(4);
+      output(2) = ncv(5);
+      output(3) = ncv(6);
+      return output;
+    }
      
   };
     
