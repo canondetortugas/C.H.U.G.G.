@@ -1,0 +1,145 @@
+#!/usr/bin/env python
+
+import numpy as np
+
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+import matplotlib.path as path
+import matplotlib.animation as animation
+import time
+
+import rospy
+import tf.transformations as trans
+from chugg_tracker.msg import Posterior
+
+class HistPlot:
+
+    def __init__(self, ax, color, nbins, hrange):
+        self.color = color
+        self.ax = ax
+        self.nbins = nbins
+        self.range = hrange
+
+        n, bins = np.histogram([], nbins, hrange)
+
+        left = np.array(bins[:-1])
+        right = np.array(bins[1:])
+        bottom = np.zeros(len(left))
+        top = bottom + n
+        nrects = len(left)
+
+        # here comes the tricky part -- we have to set up the vertex and path
+        # codes arrays using moveto, lineto and closepoly
+
+        # for each rect: 1 for the MOVETO, 3 for the LINETO, 1 for the
+        # CLOSEPOLY; the vert for the closepoly is ignored but we still need
+        # it to keep the codes aligned with the vertices
+        nverts = nrects*(1+3+1)
+        self.verts = np.zeros((nverts, 2))
+        codes = np.ones(nverts, int) * path.Path.LINETO
+        codes[0::5] = path.Path.MOVETO
+        codes[4::5] = path.Path.CLOSEPOLY
+        self.verts[0::5,0] = left
+        self.verts[0::5,1] = bottom
+        self.verts[1::5,0] = left
+        self.verts[1::5,1] = top
+        self.verts[2::5,0] = right
+        self.verts[2::5,1] = top
+        self.verts[3::5,0] = right
+        self.verts[3::5,1] = bottom
+        
+        barpath = path.Path(self.verts, codes)
+        patch = patches.PathPatch(barpath, facecolor=color, edgecolor='black', alpha=0.5)
+        ax.add_patch(patch)
+
+        ax.set_xlim(left[0], right[-1])
+        ax.set_ylim(bottom.min(), top.max())
+        
+        self.bottom = bottom
+        self.top = top
+    
+    def update(self, data):
+        n, bins = np.histogram(data, self.nbins, self.range)
+        self.top = self.bottom + n
+        self.verts[1::5,1] = self.top
+        self.verts[2::5,1] = self.top
+        self.ax.set_ylim(self.bottom.min(), self.top.max())
+
+class MultiHist:
+    
+    def __init__(self, plots, ranges):
+        nplots = len(plots)
+        self.fig = plt.figure()
+        self.plots = dict()
+        for (idx, name, hrange) in zip( range(1, nplots+1), plots, ranges):
+            ax = plt.subplot(nplots+1, 1, idx)
+            self.plots[name] = HistPlot(ax, 'green', 100, hrange)
+
+        plt.ion()
+        plt.show()
+            
+    def update(self, name, data):
+        self.plots[name].update(data)
+        # plt.draw()
+
+plots = ['roll', 'pitch', 'yaw', 'wx', 'wy', 'wz']
+ori_range = (0, 2*np.pi)
+vel_range = (-10, 10)
+ranges= [ori_range, ori_range, ori_range, vel_range, vel_range, vel_range]
+m = MultiHist(plots, ranges)
+
+def postCallback(msg):
+    roll = []
+    pitch = []
+    yaw = []
+    wx = []
+    wy = []
+    wz = []
+    
+    for sample in msg.samples:
+        q = sample.ori
+        v = sample.vel
+        # I belive the 's' is for 'static'. If not, try 'r'
+        r, p, y = trans.euler_from_quaternion((q.x, q.y, q.z, q.w), 'sxyz')
+        roll.append(r)
+        pitch.append(p)
+        yaw.append(y)
+        wx.append(v.x)
+        wy.append(v.y)
+        wz.append(v.z)
+    m.update('roll', roll)
+    m.update('pitch', pitch)
+    m.update('yaw', yaw)
+    m.update('wx', wx)
+    m.update('wy', wy)
+    m.update('wz', wz)
+    plt.draw()
+    
+def spinOnce():
+   pass 
+
+def spin():
+    rospy.init_node('post_view')
+
+    sub = rospy.Subscriber('posterior', Posterior , postCallback)
+    
+    r = rospy.Rate( rospy.get_param('~loop_rate', 60))
+    
+    while not rospy.is_shutdown():
+        spinOnce()
+        r.sleep()
+
+if __name__=='__main__':
+
+    spin()
+    
+    # while(1):
+        
+    #     for name in plots:
+    #         data = np.random.randn(1000)
+    #         m.update(name, data)
+        
+    #     plt.draw()
+    #     time.sleep(0.05)
+
+    
