@@ -54,6 +54,10 @@
 
 /// CHUGG
 #include <chugg_tracker/chugg_filter.h>
+#include <chugg_tracker/Posterior.h>
+
+typedef chugg_tracker::Posterior _Posterior;
+typedef chugg_tracker::Sample  _Sample;
 
 typedef ar_track_alvar::AlvarMarker _AlvarMarker;
 typedef ar_track_alvar::AlvarMarkers _AlvarMarkers;
@@ -62,7 +66,7 @@ class ChuggTrackerNode: public BaseNode
 {
 private:
   ros::NodeHandle nh_rel_;
-  ros::Publisher filter_rpy_pub_;
+  ros::Publisher filter_rpy_pub_, post_pub_;
   ros::Subscriber marker_sub_;
   tf::TransformBroadcaster br_;
   
@@ -83,6 +87,8 @@ private:
        marker_sub_ = nh_rel_.subscribe<_AlvarMarkers>("markers_in", 1, &ChuggTrackerNode::markerCallback, this);
 
        filter_rpy_pub_ = nh_rel_.advertise<geometry_msgs::Vector3>("filter/rpy", 1);
+       
+       post_pub_ = nh_rel_.advertise<_Posterior>("filter/posterior", 1);
      }
 
   // Running spin() will cause this function to get called at the loop rate until this node is killed.
@@ -90,6 +96,9 @@ private:
      {
        /// Predict
        filter_.predict();
+       
+       std::shared_ptr<_Posterior> post = filter_.getPosterior();
+       post_pub_.publish(*post);
 
        /// convert filtered orientation to RPY and publish
        double roll, pitch, yaw;

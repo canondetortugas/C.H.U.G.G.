@@ -83,9 +83,10 @@ class MultiHist:
         # plt.draw()
 
 plots = ['roll', 'pitch', 'yaw', 'wx', 'wy', 'wz']
-ori_range = (0, 2*np.pi)
+ry_range = (-np.pi, np.pi)
+p_range = (-np.pi/2, np.pi/2)
 vel_range = (-10, 10)
-ranges= [ori_range, ori_range, ori_range, vel_range, vel_range, vel_range]
+ranges= [ry_range, p_range, ry_range, vel_range, vel_range, vel_range]
 m = MultiHist(plots, ranges)
 
 def postCallback(msg):
@@ -104,6 +105,7 @@ def postCallback(msg):
         roll.append(r)
         pitch.append(p)
         yaw.append(y)
+        # print (r, p, y)
         wx.append(v.x)
         wy.append(v.y)
         wz.append(v.z)
@@ -113,7 +115,7 @@ def postCallback(msg):
     m.update('wx', wx)
     m.update('wy', wy)
     m.update('wz', wz)
-    plt.draw()
+    # plt.draw()
     
 def spinOnce():
    pass 
@@ -121,18 +123,21 @@ def spinOnce():
 def spin():
     rospy.init_node('post_view')
 
-    sub = rospy.Subscriber('posterior', Posterior , postCallback)
+    sub = rospy.Subscriber('posterior', Posterior , callback=postCallback, queue_size=1)
     
     r = rospy.Rate( rospy.get_param('~loop_rate', 60))
     
     while not rospy.is_shutdown():
         spinOnce()
+        plt.draw()
         r.sleep()
 
 if __name__=='__main__':
 
     spin()
-    
+
+    # rospy.spin()
+
     # while(1):
         
     #     for name in plots:

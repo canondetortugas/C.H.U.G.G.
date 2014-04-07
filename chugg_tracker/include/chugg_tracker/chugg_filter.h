@@ -50,6 +50,11 @@
 #include <chugg_tracker/system_pdf_constant_velocity.h>
 #include <chugg_tracker/marker_measurement_pdf.h>
 
+#include <chugg_tracker/Posterior.h>
+
+typedef chugg_tracker::Posterior _Posterior;
+typedef chugg_tracker::Sample  _Sample;
+
 /// NOTE: BFL absolutely needs to be included after ROS packages
 /// BFL pollutes the namespace and will interfere with these packages if it is
 /// included before them
@@ -139,15 +144,35 @@ namespace chugg
     }
      
     /// Get a list of samples from the posterior distribution
-    std::shared_ptr<std::vector<tf::Quaternion> > getPosterior()
+    std::shared_ptr<_Posterior> getPosterior()
     {
-      std::shared_ptr<std::vector<tf::Quaternion> > output = 
-	std::make_shared<std::vector<tf::Quaternion> >();
+      typedef std::vector< BFL::WeightedSample<ColumnVector> > _SampleVec;
+
+      std::shared_ptr<_Posterior > output = 
+	std::make_shared<_Posterior >();
       
       BFL::MCPdf<ColumnVector> * posterior = filter_->PostGet();
-
       
+      std::vector< BFL::WeightedSample<ColumnVector> > const & samples = posterior->ListOfSamplesGet();
 
+      for(_SampleVec::const_iterator sample_it = samples.begin(); sample_it != samples.end(); ++sample_it)
+	{
+	  ColumnVector const & sample = sample_it->ValueGet();
+
+	  _Sample msg;
+	  msg.ori.w = sample(1);
+	  msg.ori.x = sample(2);
+	  msg.ori.y = sample(3);
+	  msg.ori.z = sample(4);
+	    
+	  msg.vel.x = sample(5);
+	  msg.vel.y = sample(6);
+	  msg.vel.z = sample(7);
+	  
+	  output->samples.push_back(msg);
+	}
+
+      return output;
     }
 
   private:
