@@ -6,13 +6,14 @@
   <arg name="rate" default="60" />
   <arg name="args" value="_loop_rate:=$(arg rate)" />
 
+  <rosparam command="load" file="$(find chugg_tracker)/params/filter.yaml" param="/chugg_tracker/filter" />
+
   <node
       pkg="$(arg pkg)"
       type="$(arg type)"
       name="$(arg name)"
       args="$(arg args)"
       output="screen" 
-      launch-prefix="xterm -e gdb --args"
       />
   
 </launch>

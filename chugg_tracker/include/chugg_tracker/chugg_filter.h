@@ -201,15 +201,11 @@ namespace chugg
 
       BFL::Gaussian ori_system_noise(ori_system_noise_mean, ori_system_noise_cov);
 
-      if( !system_pdf_ )
-	system_pdf_ = std::make_shared<chugg::SystemPDFConstantVelocity>( ori_system_noise);
-      else
-	*system_pdf_ = chugg::SystemPDFConstantVelocity( ori_system_noise );
+      system_pdf_.reset();
+      system_pdf_ = std::make_shared<chugg::SystemPDFConstantVelocity>( ori_system_noise);
 
-      if( !system_ )
-	system_ = std::make_shared<_SystemModel>( system_pdf_.get() );
-      else
-	*system_ = _SystemModel( system_pdf_.get() );
+      system_.reset();
+      system_ = std::make_shared<_SystemModel>( system_pdf_.get() );
 
       ////////////////////////////////////////////////////////
       /// Set up measurement PDF
@@ -224,14 +220,11 @@ namespace chugg
 
       BFL::Gaussian marker_measurement_noise(marker_measurement_mean, marker_measurement_cov);
 
-      if( !marker_measurement_pdf_ )
-	marker_measurement_pdf_ = std::make_shared<chugg::MarkerMeasurementPDF>( marker_measurement_noise );
-      else
-	*marker_measurement_pdf_ = chugg::MarkerMeasurementPDF( marker_measurement_noise );
-      if( !marker_measurement_ )
-	marker_measurement_ = std::make_shared<_MeasurementModel>( marker_measurement_pdf_.get() );
-      else
-	*marker_measurement_ = _MeasurementModel( marker_measurement_pdf_.get() );
+      marker_measurement_pdf_.reset();
+      marker_measurement_pdf_ = std::make_shared<chugg::MarkerMeasurementPDF>( marker_measurement_noise );
+
+      marker_measurement_.reset();
+      marker_measurement_ = std::make_shared<_MeasurementModel>( marker_measurement_pdf_.get() );
       
       /// Reset the filter with the new value for N samples
       if( last_sample_count_ != config.samples )
@@ -274,14 +267,9 @@ namespace chugg
       
       BFL::Gaussian vel_prior(vel_mean, vel_cov);
       
-      if( !prior_ )
-	{
-	  prior_ = std::make_shared<BFL::MCPdf<ColumnVector> >(config_.samples, 7);
-	}
-      else
-	{
-	  *prior_ = BFL::MCPdf<ColumnVector>(config_.samples, 7);
-	}
+      prior_.reset();
+      prior_ = std::make_shared<BFL::MCPdf<ColumnVector> >(config_.samples, 7);
+
 
       /// What we do here: Get N RPY samples from a uniform distribution and N angular vel samples from a
       /// gaussian distribution. We then convert the RPY samples into quats, combine these and the vel samples
@@ -321,10 +309,8 @@ namespace chugg
 
       /// I believe that the third parameter is the number of effective samples that we have to drop below
       /// before we resample
-      if( !filter_ )
-	filter_ = std::make_shared<_Filter>( prior_.get(), 0, double(config_.samples/4.0), DEFAULT_RS);
-      else
-	*filter_ = _Filter( prior_.get(), 0, double(config_.samples/4.0), DEFAULT_RS);
+      filter_.reset();
+      filter_ = std::make_shared<_Filter>( prior_.get(), 0, double(config_.samples/4.0), DEFAULT_RS);
       
     }
     

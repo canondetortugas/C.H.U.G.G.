@@ -123,7 +123,7 @@ def spinOnce():
 def spin():
     rospy.init_node('post_view')
 
-    sub = rospy.Subscriber('posterior', Posterior , callback=postCallback, queue_size=1)
+    sub = rospy.Subscriber(rospy.get_param('~posterior_topic', 'chugg_tracker/filter/posterior'), Posterior , callback=postCallback, queue_size=1)
     
     r = rospy.Rate( rospy.get_param('~loop_rate', 60))
     

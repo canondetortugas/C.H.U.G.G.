@@ -97,7 +97,8 @@ namespace chugg
        double const d = quatDistance(ori, meas);
        arg(1) = d;
        arg(2) = d/dt;
-       
+       BFL::Probability P = noise_.ProbabilityGet( arg );
+       double p = P.getValue();
        return noise_.ProbabilityGet( arg );
      }
 
