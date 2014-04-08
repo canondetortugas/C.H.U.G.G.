@@ -227,8 +227,8 @@ namespace chugg
       marker_measurement_ = std::make_shared<_MeasurementModel>( marker_measurement_pdf_.get() );
       
       /// Reset the filter with the new value for N samples
-      if( last_sample_count_ != config.samples )
-	initializeFilter();
+      // if( last_sample_count_ != config.samples )
+      initializeFilter();
       
     }
 
@@ -311,6 +311,7 @@ namespace chugg
       /// before we resample
       filter_.reset();
       filter_ = std::make_shared<_Filter>( prior_.get(), 0, double(config_.samples/4.0), DEFAULT_RS);
+      // filter_ = std::make_shared<_Filter>( prior_.get(), 10, 0, DEFAULT_RS);
       
     }
     
