@@ -93,10 +93,13 @@ namespace chugg
        tf::Vector3 vel( state(5), state(6), state(7));
 
        MatrixWrapper::ColumnVector arg(2);
-
        double const d = quatDistance(ori, meas);
+       // ROS_INFO_STREAM("Ori: " << ori.getX() <<", " << ori.getY() << ", " << ori.getZ() << ", " << ori.getW() );
+       // ROS_INFO_STREAM("Meas: " << meas.getX() <<", " << meas.getY() << ", " << meas.getZ() << ", " << meas.getW() );
+       // ROS_INFO_STREAM("Dist: " << d );
        arg(1) = d;
        arg(2) = d/dt;
+       // double const d2 = arg(2);
        BFL::Probability P = noise_.ProbabilityGet( arg );
        double p = P.getValue();
        return noise_.ProbabilityGet( arg );
@@ -105,7 +108,7 @@ namespace chugg
      /// implements distance metric on SO(3): arccos(|q1.q2])
      double quatDistance(tf::Quaternion const & q1, tf::Quaternion const & q2) const 
      {
-       return acos( abs( q1.dot(q2) ) );
+       return acos( fabs( q1.dot(q2) ) );
      }
         
     };
