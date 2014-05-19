@@ -66,8 +66,8 @@ private:
   Vn100 vn100_;
   VnVector3 magnet_, acc_, rate_;
   VnQuaternion quat_;
-  VnMatrix3x3 mat_;
-  VnYpr ypr_;
+  // VnMatrix3x3 mat_;
+  // VnYpr ypr_;
   float temp_;
   unsigned int status_;
 
@@ -156,8 +156,6 @@ private:
     if(ori_)
       {
 	status_ = vn100_getQuaternion(&vn100_, &quat_);
-	// status_ = vn100_getDirectionCosineMatrix(&vn100_, &mat_);
-	// status_ = vn100_getYawPitchRoll(&vn100_, &ypr_);
 	if(status_)
 	  {
 	    ROS_ERROR_STREAM("Failed to read IMU orientation with error " << brk(status_map_.at(status_)));
@@ -165,14 +163,11 @@ private:
 	else
 	  {
 	    /// Quaternion initializes in xyzw order
-	    imu_tf_ = tf::Transform( tf::Quaternion(-quat_.x, quat_.y, quat_.z, quat_.w).inverse() );
-	    // imu_tf_ = tf::Transform( tf::Matrix3x3(mat_.c00, mat_.c01, mat_.c02,
-	    // 					   mat_.c10, mat_.c11, mat_.c12,
-	    // 					   mat_.c20, mat_.c21, mat_.c22));
-	    // tf::Quaternion quat;
-	    // quat.setRPY( ypr_.roll, ypr_.pitch, ypr_.yaw);
-	    // quat.setEuler( ypr_.yaw, ypr_.pitch, ypr_.roll);
-	    // imu_tf_ = tf::Transform( quat );
+
+	    /// Negating the x component fixes what seems to be an issue with handedness, where rotations around the x axis were in the wrong direction
+	    /// Inverting the quaternion makes vn100 the convention match the tf convention
+	    /// Multiplying by an additional quaternion rotates 180 around the x axis so that the frame is aligned with the markings on the IMU body
+	    imu_tf_ = tf::Transform( tf::Quaternion(-quat_.x, quat_.y, quat_.z, quat_.w).inverse()*tf::Quaternion(1, 0, 0, 0) );
 
 	    tf::StampedTransform output( imu_tf_, ros::Time::now(), "/world", IMU_FRAME);
 	    
