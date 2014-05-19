@@ -1,2 +1,2 @@
-{marker_ori_cov: 0.001, marker_ori_vel_cov: 1.0, prior_ori_vel_cov: 1.0, samples: 72,
+{marker_ori_cov: 0.001, marker_ori_vel_cov: 1.0, prior_ori_vel_cov: 1.0, samples: 200,
   system_ori_cov: 0.0001, system_ori_vel_cov: 0.001}
