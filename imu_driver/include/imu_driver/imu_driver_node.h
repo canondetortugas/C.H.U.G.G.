@@ -44,28 +44,132 @@
 
 // uscauv
 #include <uscauv_common/base_node.h>
+#include <uscauv_common/param_loader.h>
+#include <uscauv_common/macros.h>
+
+#include <tf/transform_broadcaster.h>
+
+#include <geometry_msgs/Vector3Stamped.h>
+
+#include <vectornav.h>
+
+static const char* const COM_PORT = "//dev//ttyUSB0";
+static const char * const IMU_FRAME = "/imu";
 
 class ImuDriverNode: public BaseNode
 {
+private:
+  typedef geometry_msgs::Vector3Stamped _Vector3;
+
+private:
+
+  Vn100 vn100_;
+  VnVector3 magnet_, acc_, rate_;
+  VnQuaternion quat_;
+  float temp_;
+  unsigned int status_;
+
+  _Vector3 ar_;
+  tf::Transform imu_tf_;
+
+  std::map<unsigned int, std::string> status_map_;
+
+  ros::NodeHandle nh_rel_;
+  ros::Publisher rate_pub_;
+
+  tf::TransformBroadcaster br_;
+  
+  bool ori_;
+  int baud_rate_;
+
+  bool connected_;
   
  public:
-  ImuDriverNode(): BaseNode("ImuDriver")
+  ImuDriverNode(): BaseNode("ImuDriver"), nh_rel_("~"), connected_(false)
    {
+     status_map_ = {{0, "No Error"},
+		    {1, "Unknown Error"},
+		    {2, "Not Implemented"},
+		    {3, "Timeout"},
+		    {4, "Invalid Value"},
+		    {5, "File Not Found"},
+		    {6, "Not Connected"}};
    }
+
+  ~ImuDriverNode()
+  {
+    if(connected_)
+      {
+	status_ = vn100_disconnect(&vn100_);
+	/// ros printing does not work at this point
+	std::cout <<"Disconnected from IMU with status " << brk(status_map_.at(status_)) << std::endl;
+      }
+
+  }
 
  private:
 
   // Running spin() will cause this function to be called before the node begins looping the spinOnce() function.
   void spinFirst()
      {
-	 
+              
+       ori_ = uscauv::param::load<bool>(nh_rel_, "ori", false);
+       baud_rate_ = uscauv::param::load<int>(nh_rel_, "baud_rate", 921600);
+
+       rate_pub_ = nh_rel_.advertise<_Vector3>("angular_rate", 1);
+       
+       status_ = vn100_connect(&vn100_, COM_PORT, baud_rate_);
+       if(status_)
+	 {
+	   ROS_FATAL_STREAM("Failed to open IMU with error " << brk(status_map_.at(status_)));
+	   ros::shutdown();
+	 }
+       else
+	 {
+	   connected_ = true;
+	 }
+              
      }  
 
   // Running spin() will cause this function to get called at the loop rate until this node is killed.
   void spinOnce()
-     {
+  {
+    status_ = vn100_getCalibratedImuMeasurements(&vn100_, &magnet_, &acc_, &rate_, &temp_);
+    
+    if(status_)
+      {
+	ROS_ERROR_STREAM("Failed to read IMU rate with error " << brk(status_map_.at(status_)));
+      }
+    else
+      {
+    	ar_.vector.x = rate_.c0;
+	ar_.vector.y = rate_.c1;
+	ar_.vector.z = rate_.c2;
+	ar_.header.stamp = ros::Time::now();
+	ar_.header.frame_id = IMU_FRAME;
 
-     }
+	rate_pub_.publish(ar_);
+      }
+
+    if(ori_)
+      {
+	status_ = vn100_getQuaternion(&vn100_, &quat_);
+	if(status_)
+	  {
+	    ROS_ERROR_STREAM("Failed to read IMU orientation with error " << brk(status_map_.at(status_)));
+	  }
+	else
+	  {
+	    /// Quaternion initializes in xyzw order
+	    imu_tf_ = tf::Transform( tf::Quaternion(-quat_.x, -quat_.y, -quat_.z, quat_.w) );
+	    tf::StampedTransform output( imu_tf_, ros::Time::now(), "/world", IMU_FRAME);
+	    
+	    br_.sendTransform(output);
+	  }
+
+      }
+    
+  }
 
 };
 

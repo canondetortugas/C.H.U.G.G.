@@ -3,8 +3,11 @@
   <arg name="pkg" value="imu_driver" />
   <arg name="name" value="imu_driver" />
   <arg name="type" default="$(arg name)" />
+
   <arg name="rate" default="60" />
-  <arg name="args" value="_loop_rate:=$(arg rate)" />
+  <arg name="ori" default="true" />
+
+  <arg name="args" value="_loop_rate:=$(arg rate) _ori:=$(arg ori)" />
 
   <node
       pkg="$(arg pkg)"

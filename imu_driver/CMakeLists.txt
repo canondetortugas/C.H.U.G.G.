@@ -4,14 +4,14 @@ project(imu_driver)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS uscauv_common tf)
+find_package(catkin REQUIRED COMPONENTS uscauv_common tf geometry_msgs)
 
 include_directories(include include/imu_driver ${catkin_INCLUDE_DIRS})
 
 catkin_package(
   INCLUDE_DIRS include
 #  LIBRARIES imu_driver
-CATKIN_DEPENDS uscauv_common tf
+CATKIN_DEPENDS uscauv_common tf geometry_msgs
 #  DEPENDS system_lib
 )
 
