@@ -33,7 +33,8 @@ catkin_package(
   #  DEPENDS system_lib
 )
 
-add_library(chugg_filter src/chugg_filter.cpp src/marker_measurement_pdf.cpp src/system_pdf_constant_velocity.cpp)
+add_library(chugg_filter src/chugg_filter.cpp src/marker_measurement_pdf.cpp 
+  src/system_pdf_constant_velocity.cpp src/imu_measurement_pdf.cpp )
 target_link_libraries(chugg_filter ${catkin_LIBRARIES} ${BFL_LDFLAGS})
 add_dependencies(chugg_filter ${PROJECT_NAME}_gencfg ${PROJECT_NAME}_generate_messages_cpp)
 add_executable( chugg_tracker nodes/chugg_tracker_node.cpp )

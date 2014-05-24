@@ -4,7 +4,8 @@
   <!-- <include file="$(find chugg_finder)/launch/chugg_finder.launch" /> -->
 
   <remap from="chugg_tracker/markers_in" to="ar_pose_marker" />
-  <include file="$(find chugg_finder)/launch/markers.launch" />
+  <remap from="chugg_tracker/imu_in" to="imu_driver/angular_rate" />
+  <!-- <include file="$(find chugg_finder)/launch/markers.launch" /> -->
   <include file="$(find chugg_tracker)/launch/chugg_tracker.launch" />
   
 

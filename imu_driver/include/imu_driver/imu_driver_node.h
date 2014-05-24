@@ -114,7 +114,6 @@ private:
   // Running spin() will cause this function to be called before the node begins looping the spinOnce() function.
   void spinFirst()
      {
-              
        ori_ = uscauv::param::load<bool>(nh_rel_, "ori", false);
        baud_rate_ = uscauv::param::load<int>(nh_rel_, "baud_rate", 921600);
 
@@ -130,7 +129,6 @@ private:
 	 {
 	   connected_ = true;
 	 }
-              
      }  
 
   // Running spin() will cause this function to get called at the loop rate until this node is killed.
