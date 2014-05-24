@@ -1,151 +1,138 @@
 #!/usr/bin/env python
 
-import matplotlib
-
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-import matplotlib.path as path
-import matplotlib.animation as animation
+import sys
 import time
 
+from PyQt4 import QtCore, QtGui
+from PyQt4.QtCore import pyqtSignal, pyqtSlot, QObject
+
+import pyqtgraph as pg
+
 import rospy
+
 import tf.transformations as trans
 from chugg_tracker.msg import Posterior
+from chugg_tracker.msg import Sample
 
-class HistPlot:
+import numpy as np
 
-    def __init__(self, ax, color, nbins, hrange):
-        self.color = color
-        self.ax = ax
-        self.nbins = nbins
-        self.range = hrange
+channels = ['roll', 'pitch', 'yaw', 'wx', 'wy', 'wz']
 
-        n, bins = np.histogram([], nbins, hrange)
-
-        left = np.array(bins[:-1])
-        right = np.array(bins[1:])
-        bottom = np.zeros(len(left))
-        top = bottom + n
-        nrects = len(left)
-
-        # here comes the tricky part -- we have to set up the vertex and path
-        # codes arrays using moveto, lineto and closepoly
-
-        # for each rect: 1 for the MOVETO, 3 for the LINETO, 1 for the
-        # CLOSEPOLY; the vert for the closepoly is ignored but we still need
-        # it to keep the codes aligned with the vertices
-        nverts = nrects*(1+3+1)
-        self.verts = np.zeros((nverts, 2))
-        codes = np.ones(nverts, int) * path.Path.LINETO
-        codes[0::5] = path.Path.MOVETO
-        codes[4::5] = path.Path.CLOSEPOLY
-        self.verts[0::5,0] = left
-        self.verts[0::5,1] = bottom
-        self.verts[1::5,0] = left
-        self.verts[1::5,1] = top
-        self.verts[2::5,0] = right
-        self.verts[2::5,1] = top
-        self.verts[3::5,0] = right
-        self.verts[3::5,1] = bottom
+class HistViewer(QObject):
+    notify = pyqtSignal()
+    
+    def __init__(self, names):
+        QObject.__init__(self)
         
-        barpath = path.Path(self.verts, codes)
-        patch = patches.PathPatch(barpath, facecolor=color, edgecolor='black', alpha=0.5)
-        ax.add_patch(patch)
+        self.nd = len(names)
+        self.plots = {}
+        self.win = pg.GraphicsWindow()
+        for (idx, name) in zip(range(len(names)), names):
+            pp = pg.PlotItem()
+            pp.setTitle(name)
+            self.win.addItem(pp, row=idx, col=0)
+            self.plots[name] = pp
 
-        ax.set_xlim(left[0], right[-1])
-        ax.set_ylim(bottom.min(), top.max())
+    def connect(self, *args):
+        self.notify.connect(*args)
         
-        self.bottom = bottom
-        self.top = top
-    
-    def update(self, data):
-        n, bins = np.histogram(data, self.nbins, self.range)
-        self.top = self.bottom + n
-        self.verts[1::5,1] = self.top
-        self.verts[2::5,1] = self.top
-        self.ax.set_ylim(self.bottom.min(), self.top.max())
+    def updateHist(self, name, x, y):
+        plot = self.plots[name]
+        plot.clear()
+        # Pull out all left bin edges into x0 and right bin edges into x1
+        x0 = x[:-1]
+        x1 = x[1:]
+        bb = pg.BarGraphItem(x0=x0, x1=x1, height=y)
+        plot.addItem(bb)
 
-class MultiHist:
-    
-    def __init__(self, plots, ranges):
-        nplots = len(plots)
-        self.fig = plt.figure()
-        self.plots = dict()
-        for (idx, name, hrange) in zip( range(1, nplots+1), plots, ranges):
-            ax = plt.subplot(nplots+1, 1, idx)
-            self.plots[name] = HistPlot(ax, 'green', 100, hrange)
+    @pyqtSlot(dict)
+    def updateAll(self, labeled_data):
+        for (name, data) in labeled_data.iteritems():
+            self.updateHist(name, data[0], data[1])
+        self.notify.emit()
 
-        plt.ion()
-        plt.show()
-            
-    def update(self, name, data):
-        self.plots[name].update(data)
-        # plt.draw()
 
-plots = ['roll', 'pitch', 'yaw', 'wx', 'wy', 'wz']
-ry_range = (-np.pi, np.pi)
-p_range = (-np.pi/2, np.pi/2)
-vel_range = (-10, 10)
-ranges= [ry_range, p_range, ry_range, vel_range, vel_range, vel_range]
-m = MultiHist(plots, ranges)
-
-def postCallback(msg):
-    roll = []
-    pitch = []
-    yaw = []
-    wx = []
-    wy = []
-    wz = []
-    
-    for sample in msg.samples:
-        q = sample.ori
-        v = sample.vel
-        # I belive the 's' is for 'static'. If not, try 'r'
-        r, p, y = trans.euler_from_quaternion((q.x, q.y, q.z, q.w), 'sxyz')
-        roll.append(r)
-        pitch.append(p)
-        yaw.append(y)
-        # print (r, p, y)
-        wx.append(v.x)
-        wy.append(v.y)
-        wz.append(v.z)
-    m.update('roll', roll)
-    m.update('pitch', pitch)
-    m.update('yaw', yaw)
-    m.update('wx', wx)
-    m.update('wy', wy)
-    m.update('wz', wz)
-    # plt.draw()
-    
-def spinOnce():
-   pass 
-
-def spin():
-    rospy.init_node('post_view')
-
-    sub = rospy.Subscriber(rospy.get_param('~posterior_topic', 'chugg_tracker/filter/posterior'), Posterior , callback=postCallback, queue_size=1)
-    
-    r = rospy.Rate( rospy.get_param('~loop_rate', 60))
-    
-    while not rospy.is_shutdown():
-        spinOnce()
-        plt.draw()
-        r.sleep()
-
-if __name__=='__main__':
-
-    spin()
-
-    # rospy.spin()
-
-    # while(1):
         
-    #     for name in plots:
-    #         data = np.random.randn(1000)
-    #         m.update(name, data)
-        
-    #     plt.draw()
-    #     time.sleep(0.05)
-
+class RosNode(QtCore.QThread):
+    notify = pyqtSignal(dict)
     
+    def __init__(self):
+        QtCore.QThread.__init__(self)
+        self.waiting = False
+        # self.notify.connect(viewer.updateAll)
+
+    def connect(self, *args):
+        self.notify.connect(*args)
+        
+    @pyqtSlot()
+    def stopWaiting(self):
+        self.waiting = False
+
+    def run(self):
+        self.sub = rospy.Subscriber(rospy.get_param('~post_topic', 'chugg_tracker/filter/posterior'), 
+                                    Posterior, callback=self.postCallback)
+
+        rospy.spin()
+
+        # while True:
+        #     time.sleep(0.01)
+        #     samples = []
+        #     for i in range(100):
+        #         sample = Sample()
+        #         sample.ori.x = np.random.randn()
+        #         sample.ori.y = np.random.randn()
+        #         sample.ori.z = np.random.randn()
+        #         sample.ori.w = np.random.randn()
+        #         sample.vel.x = np.random.randn()
+        #         sample.vel.y = np.random.randn()
+        #         sample.vel.z = np.random.randn()
+        #         n = np.sqrt(sample.ori.x**2 + sample.ori.y**2 + sample.ori.z**2 + sample.ori.w**2)
+        #         sample.ori.x /= n
+        #         sample.ori.y /= n
+        #         sample.ori.z /= n
+        #         sample.ori.w /= n
+        #         samples.append(sample)
+        #     msg = Posterior()
+        #     msg.samples = samples
+        #     self.postCallback(msg)
+                
+    def postCallback(self, msg):
+        if self.waiting:
+            return
+
+        samples = {channel: [] for channel in channels}
+        
+        hist = {}
+
+        for sample in msg.samples:
+            q = sample.ori
+            v = sample.vel
+            # I belive the 's' is for 'static'. If not, try 'r'
+            r, p, y = trans.euler_from_quaternion((q.x, q.y, q.z, q.w), 'sxyz')
+            samples['roll'].append(r)
+            samples['pitch'].append(p)
+            samples['yaw'].append(y)
+            samples['wx'].append(v.x)
+            samples['wy'].append(v.y)
+            samples['wz'].append(v.z)
+        for (ax, ss) in samples.iteritems():
+            # bins is a list of the histogram bin edges (length(ss)+1)
+            n, bins = np.histogram(ss, bins=100)
+            hist[ax] = (bins, n)
+        
+        self.waiting = True
+        self.notify.emit(hist)
+
+if __name__=="__main__":
+    app = QtGui.QApplication(rospy.myargv())
+    rospy.init_node('post_view', anonymous=True)
+
+    hv = HistViewer(channels)
+    rn = RosNode()
+
+    rn.connect(hv.updateAll)
+    hv.connect(rn.stopWaiting)
+
+    rn.start()
+
+    app.exec_()

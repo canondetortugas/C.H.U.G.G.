@@ -121,7 +121,7 @@ private:
     if( msg-> markers.size() < 1)
       return;
     if( msg->markers.size() > 1)
-      ROS_WARN("More than one cube seems to be tracked. Taking first cube only.");
+      ROS_WARN("More than one cube seems to be being tracked. Taking first cube only.");
     
     /// An annoying thing about ALVAR: The AlvarMarkers message and its PoseStamped children don't have their
     /// stamps populated. Only the AlvarMarker messages do
