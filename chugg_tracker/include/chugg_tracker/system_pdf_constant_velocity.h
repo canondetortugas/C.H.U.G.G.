@@ -121,6 +121,7 @@ namespace chugg
       tf::Vector3 nv( ncv(1), ncv(2), ncv(3));
       double norm = nv.length();
        
+      /// Creates quaternion from axis and angle
       return tf::Quaternion( nv.normalized(), norm );
     }
 
