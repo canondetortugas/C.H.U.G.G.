@@ -1,4 +1,3 @@
-
 <launch>
   <arg name="pkg" value="imu_driver" />
   <arg name="name" value="imu_driver" />
@@ -17,8 +16,5 @@
       name="$(arg name)"
       args="$(arg args)"
       output="screen" />
-  
-  <node pkg="tf" type="static_transform_publisher" name="markers_to_imu_tf"
-	args="0 0 0 0 0 0 /chugg/ori/markers /chugg/ori/imu 100" />
-  
+ 
 </launch>

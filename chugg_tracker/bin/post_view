@@ -15,21 +15,25 @@ from chugg_tracker.msg import Posterior
 from chugg_tracker.msg import Sample
 
 import numpy as np
+from numpy import pi
 
 channels = ['roll', 'pitch', 'yaw', 'wx', 'wy', 'wz']
+ranges = [(-pi, pi), (-pi/2, pi/2), (-pi, pi), (-10, 10), (-10, 10), (-10, 10)]
 
 class HistViewer(QObject):
     notify = pyqtSignal()
     
-    def __init__(self, names):
+    def __init__(self, names, ranges):
         QObject.__init__(self)
         
         self.nd = len(names)
         self.plots = {}
         self.win = pg.GraphicsWindow()
-        for (idx, name) in zip(range(len(names)), names):
+        for (idx, name, rng) in zip(range(len(names)), names, ranges):
             pp = pg.PlotItem()
             pp.setTitle(name)
+            pp.setXRange(rng[0], rng[1])
+            pp.setYRange(0, 15) # Seems like a reasonable number based on experience
             self.win.addItem(pp, row=idx, col=0)
             self.plots[name] = pp
 
@@ -104,6 +108,8 @@ class RosNode(QtCore.QThread):
         
         hist = {}
 
+        n_samples = len(msg.samples)
+
         for sample in msg.samples:
             q = sample.ori
             v = sample.vel
@@ -118,6 +124,7 @@ class RosNode(QtCore.QThread):
         for (ax, ss) in samples.iteritems():
             # bins is a list of the histogram bin edges (length(ss)+1)
             n, bins = np.histogram(ss, bins=100)
+            # hist[ax] = (bins, n/float(n_samples)) # Divide by n_samples so that hist sums to 1 like a PDF
             hist[ax] = (bins, n)
         
         self.waiting = True
@@ -127,7 +134,7 @@ if __name__=="__main__":
     app = QtGui.QApplication(rospy.myargv())
     rospy.init_node('post_view', anonymous=True)
 
-    hv = HistViewer(channels)
+    hv = HistViewer(channels, ranges)
     rn = RosNode()
 
     rn.connect(hv.updateAll)
