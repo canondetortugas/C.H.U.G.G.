@@ -50,6 +50,7 @@
 #include <chugg_tracker/system_pdf_constant_velocity.h>
 #include <chugg_tracker/marker_measurement_pdf.h>
 #include <chugg_tracker/imu_measurement_pdf.h>
+#include <chugg_tracker/quaternion.h>
 #include <chugg_tracker/Posterior.h>
 
 typedef chugg_tracker::Posterior _Posterior;
@@ -196,6 +197,27 @@ namespace chugg
 	}
 
       return output;
+    }
+    
+    tf::Quaternion getEstimator()
+    {
+      typedef std::vector< BFL::WeightedSample<ColumnVector> > _SampleVec;
+
+      BFL::MCPdf<ColumnVector> * posterior = filter_->PostGet();
+      
+      _SampleVec const & samples = posterior->ListOfSamplesGet();
+
+      std::vector<tf::Quaternion> sample_quats;
+
+      for(_SampleVec::const_iterator sample_it = samples.begin(); sample_it != samples.end(); ++sample_it)
+	{
+	  ColumnVector const & sample = sample_it->ValueGet();
+
+	  sample_quats.push_back( tf::Quaternion(sample(2), sample(3), sample(4), sample(1)) );
+
+	}
+
+      return chugg::quaternionAverage(sample_quats);
     }
 
   private:

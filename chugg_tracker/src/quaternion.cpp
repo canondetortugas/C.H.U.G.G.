@@ -45,7 +45,7 @@ namespace chugg
   {
     using namespace Eigen;
 
-    Matrix4d pp = MatrixXd::Ones(4,4);
+    Matrix4d pp = MatrixXd::Zero(4,4);
 
     for( tf::Quaternion  const & quat : samples)
       {
@@ -60,25 +60,31 @@ namespace chugg
 
     EigenSolver<Matrix4d>::EigenvalueType evals = solver.eigenvalues();
     EigenSolver<Matrix4d>::EigenvectorsType evecs = solver.eigenvectors();
+    // ROS_INFO_STREAM( evals );
+    // ROS_INFO_STREAM( evecs );
 
-    size_t max_idx = -1;
-    size_t max_val = -10000;
+    bool found = false;
+    size_t max_idx = 0;
+    double max_val = -10000;
     for(size_t idx = 0; idx < 4; ++idx)
       {
 	ROS_ASSERT( !evals[idx].imag() );
 	double const real = evals[idx].real();
-	if( real < max_val)
+	// ROS_INFO_STREAM(real);
+	if( real > max_val)
 	  {
 	    max_idx = idx;
 	    max_val = real;
+	    found = true;
 	  }
       }
-    ROS_ASSERT( max_idx > -1 );
+    ROS_ASSERT( found );
 
     Matrix<std::complex<double>, 4, 1> est = evecs.col(max_idx);
 
     tf::Quaternion const output = tf::Quaternion( est[1].real(), est[2].real(), est[3].real(), est[0].real());
-    ROS_ASSERT( output.length() == 1);
+    // ROS_INFO_STREAM( output.length() );
+    // ROS_ASSERT( output.length() == 1.0);
 
     return output;
   }

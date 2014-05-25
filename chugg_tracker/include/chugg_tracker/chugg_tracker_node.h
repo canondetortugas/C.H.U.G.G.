@@ -111,22 +111,20 @@ private:
     std::shared_ptr<_Posterior> post = filter_.getPosterior();
     post_pub_.publish(*post);
 
-    /// TODO: Switch filtered_ to MAP estimate (currently just passes through AR pose )
+    tf::Transform filtered = tf::Transform(filter_.getEstimator());
 
     /// convert filtered orientation to RPY and publish
     double roll, pitch, yaw;
-    filtered_.getBasis().getRPY(roll, pitch, yaw);
+    filtered.getBasis().getRPY(roll, pitch, yaw);
     geometry_msgs::Vector3 euler;
     euler.x = roll;
     euler.y = pitch;
     euler.z = yaw;
     filter_rpy_pub_.publish(euler);
        
-    tf::StampedTransform filtered_tf( filtered_, ros::Time::now(), base_frame_, "chugg/pose/filter"),
-      filtered_quat( tf::Transform(filtered_.getRotation()), ros::Time::now(), base_frame_, "chugg/ori/filter");
+    tf::StampedTransform filtered_tf( filtered, ros::Time::now(), base_frame_, "chugg/pose/filter");
        
     br_.sendTransform(filtered_tf);
-    br_.sendTransform(filtered_quat);
   }
   
   void markerCallback( _AlvarMarkers::ConstPtr const & msg)
@@ -168,8 +166,7 @@ private:
     
     filter_.updateMarkers( marker_to_world_quat );
     
-    /// TODO: real filtering
-    filtered_ = marker_to_world_tf;
+    // filtered_ = marker_to_world_tf;
   }
 
   void rateCallback( geometry_msgs::Vector3Stamped::ConstPtr const & msg)
