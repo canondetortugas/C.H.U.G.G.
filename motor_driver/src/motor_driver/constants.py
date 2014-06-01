@@ -1,8 +1,6 @@
 from dynamic_reconfigure.parameter_generator_catkin import int_t
 from dynamic_reconfigure.parameter_generator_catkin import str_t
 
-from enum import Enum
-
 CW = 0
 CCW = 1
 
@@ -18,12 +16,13 @@ class DigMode:
 VOLTAGE_MIN = 0.0
 VOLTAGE_MAX = 5.0
 
+DEFAULT_MOTOR_ADDRESS = '0x60'
+
 # All GPIO pins except those used for I2C
 GPIO_PINS = (7, 8, 9, 10, 11, 14, 15, 17, 18, 22, 23, 24, 25, 27)
 
-# TODO: Change these ranges to correct values
-MOTOR_MODES = {'low': DigMode((62, 100), 0, 1), 
-               'medium': DigMode((62, 1000), 1, 0), 
+MOTOR_MODES = {'low': DigMode((62, 625), 0, 1), 
+               'medium': DigMode((62, 2500), 1, 0), 
                'high': DigMode((62, 10000), 1, 1)}
 
 def get_gpio_pin_enum(gen):

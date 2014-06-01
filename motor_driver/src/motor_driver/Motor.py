@@ -25,6 +25,7 @@ class Motor:
         self.gpio = gpio
         self.config = None
         self.dir = None
+        self.address = None
 
         self.mode = mdc.MOTOR_MODES.keys()[0]
 
@@ -33,6 +34,15 @@ class Motor:
 
     def reconfigureCallback(self, config, level):
 
+        try:
+            self.address = int(config.address, 16)
+            if self.address >> 7 != 0:
+                raise ValueError("I2C address must fit in 7 bits")
+        except ValueError as e:
+            rospy.logerror('Bad address given: [ {} ]'.format(e))
+            self.address = int(mdc.DEFAULT_MOTOR_ADDRESS, 16)
+            rospy.logerror('Using default address: 0x{:x}'.format(self.address))
+            
         self.config = config
         return config
 
@@ -44,6 +54,7 @@ class Motor:
         if self.config.soft_disable:
             # Minimum RPM for the current mode
             rpm = self.mode.rng[0]
+            # Use positive motor direction as the default direction
             dir = mdc.POSITIVE_MOTOR_DIR
         else:
             rpm = rads_to_rpm(vel)
@@ -66,9 +77,10 @@ class Motor:
             volts = mdc.VOLTAGE_MIN
         if volts > mdc.VOLTAGE_MAX:
             volts = mdc.VOLTAGE_MAX
-        #TODO: Write voltage to I2C
-        #TODO: Write to GPIO to change dir if necessary
 
+        dn = volts/mdc.VOLTAGE_MAX*4095
         
-
-    
+        # Write using the MCP4725 "Write DAC register" mode (not fast write mode)
+        self.bus.write_i2c_block_data(self.address, 0x40, 
+                                      [(dn >> 4) & 0xff,
+                                       (dn << 4) & 0xff])
