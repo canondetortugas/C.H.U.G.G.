@@ -6,6 +6,8 @@
 
   <arg name="args" value="_loop_rate:=$(arg rate)" />
 
+  <rosparam command="load" file="$(find motor_driver)/params/motors.yaml" ns="motor_driver/motors" />
+
   <node
       pkg="$(arg pkg)"
       type="$(arg type)"
