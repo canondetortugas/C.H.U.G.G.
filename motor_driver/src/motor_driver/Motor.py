@@ -29,7 +29,7 @@ class Motor:
 
         self.mode = mdc.MOTOR_MODES.keys()[0]
 
-        # ROS stuff
+        # ROS
         self.rc = DynamicReconfigureServer(MotorConfig, self.reconfigureCallback, ns)
 
     def reconfigureCallback(self, config, level):
@@ -60,7 +60,7 @@ class Motor:
             rpm = rads_to_rpm(vel)
             if mdc.POSITIVE_MOTOR_DIR == mdc.CCW:
                 dir = 1 if vel >= 0 else 0
-            else if mdc.POSITIVE_MOTOR_DIR == mdc.CW:
+            elif mdc.POSITIVE_MOTOR_DIR == mdc.CW:
                 dir = 0 if vel >= 0 else 1
 
         if dir != self.dir:

@@ -30,7 +30,7 @@ def get_gpio_pin_enum(gen):
                      "GPIO pins" )
 
 def get_motor_mode_enum(gen):
-    return gen.enum( [gen.const('{}'.format(dm.rng), str_t, name, 'Motor range') for (name, dm) in MOTOR_MODES.iteritems()],
+    return gen.enum( [gen.const(name, str_t, name, 'Motor range') for (name, dm) in MOTOR_MODES.iteritems()],
                      "Motor ranges" )
 
 
