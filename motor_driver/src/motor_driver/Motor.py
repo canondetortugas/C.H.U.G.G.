@@ -80,11 +80,12 @@ class Motor:
 
         dn = int(volts/mdc.VOLTAGE_MAX*4095)
         
-        # Write using the MCP4725 "Write DAC register" mode (not fast write mode)
-        try:
-            self.bus.write_i2c_block_data(self.address, 0x40, 
-                                          [(dn >> 4) & 0xff,
-                                           (dn << 4) & 0xff])
-        except IOError as e:
-            rospy.logerr("GPIO error: [ {} ]".format(e))
+        if not self.config.dummy_i2c:
+            # Write using the MCP4725 "Write DAC register" mode (not fast write mode)
+            try:
+                self.bus.write_i2c_block_data(self.address, 0x40, 
+                                              [(dn >> 4) & 0xff,
+                                               (dn << 4) & 0xff])
+            except IOError as e:
+                rospy.logerr("GPIO error: [ {} ]".format(e))
         

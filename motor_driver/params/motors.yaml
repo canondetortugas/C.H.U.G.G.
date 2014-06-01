@@ -3,6 +3,6 @@ dig2_pin: 24
 enable_pin: 18
 hard_disable: false
 mode: high
-x: {address: '0x60', dir_pin: 17, invert: false, offset_voltage: 0.0, soft_disable: false}
-y: {address: '0x62', dir_pin: 27, invert: false, offset_voltage: 0.0, soft_disable: false}
-z: {address: '0x63', dir_pin: 22, invert: false, offset_voltage: 0.0, soft_disable: false}
+x: {address: '0x60', dir_pin: 17, invert: false, offset_voltage: 0.0, soft_disable: false, dummy_i2c: false}
+y: {address: '0x62', dir_pin: 27, invert: false, offset_voltage: 0.0, soft_disable: false, dummy_i2c: true}
+z: {address: '0x63', dir_pin: 22, invert: false, offset_voltage: 0.0, soft_disable: false, dummy_i2c: true}
