@@ -11,7 +11,7 @@ class MotorDriverNode:
         
         self.drv = MotorManager(('x', 'y', 'z'), '~motors')
         
-        self.sub = rospy.Subscriber('target_vel', Vector3, self.velocityCallback)
+        self.sub = rospy.Subscriber('~target_vel', Vector3, self.velocityCallback)
 
 
     def velocityCallback(self, msg):

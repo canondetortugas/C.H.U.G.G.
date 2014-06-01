@@ -39,9 +39,9 @@ class Motor:
             if self.address >> 7 != 0:
                 raise ValueError("I2C address must fit in 7 bits")
         except ValueError as e:
-            rospy.logerror('Bad address given: [ {} ]'.format(e))
+            rospy.logerr('Bad address given: [ {} ]'.format(e))
             self.address = int(mdc.DEFAULT_MOTOR_ADDRESS, 16)
-            rospy.logerror('Using default address: 0x{:x}'.format(self.address))
+            rospy.logerr('Using default address: 0x{:x}'.format(self.address))
             
         self.config = config
         return config
@@ -64,10 +64,10 @@ class Motor:
                 dir = 0 if vel >= 0 else 1
 
         if dir != self.dir:
-            gpio.digitalWrite(self.config.dir_pin, dir)
+            self.gpio.digitalWrite(self.config.dir_pin, dir)
             self.dir = dir
             
-        v = rpm_to_volts(rpm, mode.rng[0], mode.rng[1])
+        v = rpm_to_volts(rpm, self.mode.rng[0], self.mode.rng[1])
         self.__setVoltage(v + self.config.offset_voltage)
 
         
@@ -78,9 +78,13 @@ class Motor:
         if volts > mdc.VOLTAGE_MAX:
             volts = mdc.VOLTAGE_MAX
 
-        dn = volts/mdc.VOLTAGE_MAX*4095
+        dn = int(volts/mdc.VOLTAGE_MAX*4095)
         
         # Write using the MCP4725 "Write DAC register" mode (not fast write mode)
-        self.bus.write_i2c_block_data(self.address, 0x40, 
-                                      [(dn >> 4) & 0xff,
-                                       (dn << 4) & 0xff])
+        try:
+            self.bus.write_i2c_block_data(self.address, 0x40, 
+                                          [(dn >> 4) & 0xff,
+                                           (dn << 4) & 0xff])
+        except IOError as e:
+            rospy.logerr("GPIO error: [ {} ]".format(e))
+        
