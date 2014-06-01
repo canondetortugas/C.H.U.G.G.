@@ -19,7 +19,7 @@ VOLTAGE_MAX = 5.0
 DEFAULT_MOTOR_ADDRESS = '0x60'
 
 # All GPIO pins except those used for I2C
-GPIO_PINS = (7, 8, 9, 10, 11, 14, 15, 17, 18, 22, 23, 24, 25, 27)
+GPIO_PINS = (4, 7, 8, 9, 10, 11, 14, 15, 17, 18, 22, 23, 24, 25, 27)
 
 MOTOR_MODES = {'low': DigMode((62, 625), 0, 1), 
                'medium': DigMode((62, 2500), 1, 0), 
