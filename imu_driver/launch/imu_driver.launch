@@ -6,8 +6,11 @@
 
   <arg name="rate" default="60" />
   <arg name="ori" default="true" />
+  <arg name="com_port" default="/dev/ttyUSB0" />
 
-  <arg name="args" value="_loop_rate:=$(arg rate) _ori:=$(arg ori)" />
+  <arg name="args" value="_loop_rate:=$(arg rate) 
+			  _ori:=$(arg ori) 
+			  _com_port:=$(arg com_port)" />
 
   <node
       pkg="$(arg pkg)"
