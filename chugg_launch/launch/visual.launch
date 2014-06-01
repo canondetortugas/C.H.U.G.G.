@@ -4,6 +4,8 @@
   <node pkg="rviz" type="rviz" name="chugg_visual" output="screen"
 	args="--display-config=$(find chugg_launch)/params/chugg.rviz" />
 
+  <node pkg="chugg_tracker" type="post_view" name="post_view" output="screen" />
+
   <!-- TODO: Get an STL file for CHUGG so that this works -->
   <!-- <param name="robot_description" textfile="$(find chugg_launch)/params/chugg.urdf" /> -->
   <!-- This node will publish the static transforms in the URDF file above -->

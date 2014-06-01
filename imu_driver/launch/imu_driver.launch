@@ -1,4 +1,3 @@
-
 <launch>
   <arg name="pkg" value="imu_driver" />
   <arg name="name" value="imu_driver" />
@@ -12,11 +11,13 @@
 			  _ori:=$(arg ori) 
 			  _com_port:=$(arg com_port)" />
 
+  <rosparam command="load" file="$(find imu_driver)/params/bias.yaml" param="imu_driver/bias" />
+
   <node
       pkg="$(arg pkg)"
       type="$(arg type)"
       name="$(arg name)"
       args="$(arg args)"
       output="screen" />
-  
+ 
 </launch>

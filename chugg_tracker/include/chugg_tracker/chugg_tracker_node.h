@@ -43,8 +43,11 @@
 #include <ros/ros.h>
 
 #include <tf/transform_broadcaster.h>
+#include <tf/transform_listener.h>
 #include <tf/transform_datatypes.h>
+
 #include <geometry_msgs/Vector3.h>
+#include <geometry_msgs/Vector3Stamped.h>
 
 // uscauv
 #include <uscauv_common/base_node.h>
@@ -62,66 +65,74 @@ typedef chugg_tracker::Sample  _Sample;
 typedef ar_track_alvar::AlvarMarker _AlvarMarker;
 typedef ar_track_alvar::AlvarMarkers _AlvarMarkers;
 
+typedef geometry_msgs::Vector3 _Vector3;
+
 class ChuggTrackerNode: public BaseNode
 {
 private:
   ros::NodeHandle nh_rel_;
   ros::Publisher filter_rpy_pub_, post_pub_;
-  ros::Subscriber marker_sub_;
+  ros::Subscriber marker_sub_, imu_sub_;
   tf::TransformBroadcaster br_;
+  tf::TransformListener lr_;
+
+  std::string base_frame_;
   
   tf::Transform filtered_;
 
   chugg::ChuggFilter filter_;
 
- public:
+public:
   ChuggTrackerNode(): BaseNode("ChuggTracker"), nh_rel_("~"), filtered_( tf::Transform::getIdentity() )
-   {
-   }
+  {
+  }
 
- private:
+private:
 
   // Running spin() will cause this function to be called before the node begins looping the spinOnce() function.
   void spinFirst()
-     {
-       marker_sub_ = nh_rel_.subscribe<_AlvarMarkers>("markers_in", 1, &ChuggTrackerNode::markerCallback, this);
-
-       filter_rpy_pub_ = nh_rel_.advertise<geometry_msgs::Vector3>("filter/rpy", 1);
-       
-       post_pub_ = nh_rel_.advertise<_Posterior>("filter/posterior", 1);
-     }
-
+  {
+    marker_sub_ = nh_rel_.subscribe<_AlvarMarkers>("markers_in", 1, &ChuggTrackerNode::markerCallback, this);
+    imu_sub_ = nh_rel_.subscribe<geometry_msgs::Vector3Stamped>("imu_in", 1, &ChuggTrackerNode::rateCallback, this );
+    
+    filter_rpy_pub_ = nh_rel_.advertise<geometry_msgs::Vector3>("filter/rpy", 1);
+    
+    post_pub_ = nh_rel_.advertise<_Posterior>("filter/posterior", 1);
+    
+    base_frame_ = uscauv::param::load<std::string>(nh_rel_, "base_frame", "/camera_link");
+  }
+  
   // Running spin() will cause this function to get called at the loop rate until this node is killed.
   void spinOnce()
-     {
-       /// Predict
-       filter_.predict();
+  {
+    /// Predict
+    filter_.predict();
        
-       std::shared_ptr<_Posterior> post = filter_.getPosterior();
-       post_pub_.publish(*post);
+    std::shared_ptr<_Posterior> post = filter_.getPosterior();
+    post_pub_.publish(*post);
 
-       /// convert filtered orientation to RPY and publish
-       double roll, pitch, yaw;
-       filtered_.getBasis().getRPY(roll, pitch, yaw);
-       geometry_msgs::Vector3 euler;
-       euler.x = roll;
-       euler.y = pitch;
-       euler.z = yaw;
-       filter_rpy_pub_.publish(euler);
+    tf::Transform filtered = tf::Transform(filter_.getEstimator());
+
+    /// convert filtered orientation to RPY and publish
+    double roll, pitch, yaw;
+    filtered.getBasis().getRPY(roll, pitch, yaw);
+    geometry_msgs::Vector3 euler;
+    euler.x = roll;
+    euler.y = pitch;
+    euler.z = yaw;
+    filter_rpy_pub_.publish(euler);
        
-       tf::StampedTransform filtered_tf( filtered_, ros::Time::now(), "/camera_link", "chugg/pose/filter"),
-	 filtered_quat( tf::Transform(filtered_.getRotation()), ros::Time::now(), "/camera_link", "chugg/ori/filter");
+    tf::StampedTransform filtered_tf( filtered, ros::Time::now(), base_frame_, "chugg/pose/filter");
        
-       br_.sendTransform(filtered_tf);
-       br_.sendTransform(filtered_quat);
-     }
+    br_.sendTransform(filtered_tf);
+  }
   
   void markerCallback( _AlvarMarkers::ConstPtr const & msg)
   {
     if( msg-> markers.size() < 1)
       return;
     if( msg->markers.size() > 1)
-      ROS_WARN("More than one cube seems to be tracked. Taking first cube only.");
+      ROS_WARN("More than one cube seems to be being tracked. Taking first cube only.");
     
     /// An annoying thing about ALVAR: The AlvarMarkers message and its PoseStamped children don't have their
     /// stamps populated. Only the AlvarMarker messages do
@@ -133,22 +144,21 @@ private:
     tf::poseStampedMsgToTF( marker.pose, marker_to_world );
     marker_to_world.stamp_ = marker.header.stamp;
     
-    /// TODO: Use this instead of hard-coding /camera_link
     std::string const marker_parent = marker.header.frame_id;
+    ROS_ASSERT( marker_parent == base_frame_ );
 
     std::vector<tf::StampedTransform> output;
     
     tf::Quaternion marker_to_world_quat = marker_to_world.getRotation();
 
     tf::StampedTransform 
-      marker_to_world_tf(marker_to_world, marker_to_world.stamp_, "/camera_link", "/chugg/pose/markers"),
-      marker_to_world_rot( tf::Transform(marker_to_world.getRotation()), marker_to_world.stamp_, "/camera_link", 
-			    "/chugg/ori/markers");
+      marker_to_world_tf(marker_to_world, marker_to_world.stamp_, base_frame_, "/chugg/pose/markers"),
+      marker_to_world_rot( tf::Transform(marker_to_world.getRotation()), marker_to_world.stamp_, base_frame_, 
+			   "/chugg/ori/markers");
     output.push_back(marker_to_world_tf);
     output.push_back(marker_to_world_rot);
     
     br_.sendTransform(output);
-
 
     //////////////////////////////////////////////////////////
     // Incorporate measurement into filter////////////////////
@@ -156,8 +166,47 @@ private:
     
     filter_.updateMarkers( marker_to_world_quat );
     
-    /// TODO: real filtering
-    filtered_ = marker_to_world_tf;
+    // filtered_ = marker_to_world_tf;
+  }
+
+  void rateCallback( geometry_msgs::Vector3Stamped::ConstPtr const & msg)
+  {
+    tf::Vector3 rate_imu, rate_body;
+    tf::StampedTransform body_to_imu_tf;
+
+    if( getTransform("/chugg/ori/markers", "/chugg/ori/imu", body_to_imu_tf) )
+      {
+	ROS_ERROR("Can't incorporate rate measurement - failed to lookup IMU body transform");
+	return;
+      }
+    
+    tf::vector3MsgToTF(msg->vector, rate_imu);
+
+    /// Convert angular rate into cube body coordinate system
+    rate_body = body_to_imu_tf * rate_imu;
+    
+    /// Update the particle filter
+    filter_.updateIMU( rate_body );    
+  }
+
+  int getTransform( std::string const & parent, std::string const & child, tf::StampedTransform & output )
+  {
+    if( lr_.canTransform( parent, child, ros::Time(0) ))
+      {
+	try
+	  {
+	    lr_.lookupTransform( parent, child, ros::Time(0), output );
+
+	  }
+	catch(tf::TransformException & ex)
+	  {
+	    ROS_ERROR( "Caught exception [ %s ] looking up transform", ex.what() );
+	    return -1;
+	  }
+	return 0;
+      }
+    else 
+      return -1;
   }
 
 };

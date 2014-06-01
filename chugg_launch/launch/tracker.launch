@@ -4,7 +4,12 @@
   <!-- <include file="$(find chugg_finder)/launch/chugg_finder.launch" /> -->
 
   <remap from="chugg_tracker/markers_in" to="ar_pose_marker" />
-  <include file="$(find chugg_finder)/launch/markers.launch" />
+  <remap from="chugg_tracker/imu_in" to="imu_driver/angular_rate" />
+
+  <node pkg="tf" type="static_transform_publisher" name="markers_to_imu_tf"
+	args="0 0 0 0 0 0 /chugg/ori/markers /chugg/ori/imu 100" />
+
+  <!-- <include file="$(find chugg_finder)/launch/markers.launch" /> -->
   <include file="$(find chugg_tracker)/launch/chugg_tracker.launch" />
   
 

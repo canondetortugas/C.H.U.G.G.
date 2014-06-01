@@ -49,7 +49,8 @@
 /// CHUGG
 #include <chugg_tracker/system_pdf_constant_velocity.h>
 #include <chugg_tracker/marker_measurement_pdf.h>
-
+#include <chugg_tracker/imu_measurement_pdf.h>
+#include <chugg_tracker/quaternion.h>
 #include <chugg_tracker/Posterior.h>
 
 typedef chugg_tracker::Posterior _Posterior;
@@ -92,6 +93,9 @@ namespace chugg
 
     std::shared_ptr<chugg::MarkerMeasurementPDF> marker_measurement_pdf_;
     std::shared_ptr<_MeasurementModel> marker_measurement_;
+
+    std::shared_ptr<chugg::IMUMeasurementPDF> imu_measurement_pdf_;
+    std::shared_ptr<_MeasurementModel> imu_measurement_;
 
     std::shared_ptr<BFL::MCPdf<ColumnVector> > prior_;
 
@@ -144,6 +148,24 @@ namespace chugg
       if( !filter_->Update( system_.get(), input, marker_measurement_.get(), measurement) )
 	ROS_WARN("Marker measurement update failed.");
     }
+
+    void updateIMU(tf::Vector3 const & rate)
+    {
+      ros::Time now = ros::Time::now();
+      double const predict_dt = (now - last_predict_time_).toSec();
+      last_predict_time_ = now;
+
+      ColumnVector measurement(3);
+      measurement(1) = rate.x();
+      measurement(2) = rate.y();
+      measurement(3) = rate.z();
+
+      ColumnVector system_input(1);
+      system_input(1) = predict_dt;
+
+      if( !filter_->Update( system_.get(), system_input, imu_measurement_.get(), measurement ) )
+	ROS_WARN("IMU measurement update failed!");
+    }
      
     /// Get a list of samples from the posterior distribution
     std::shared_ptr<_Posterior> getPosterior()
@@ -175,6 +197,27 @@ namespace chugg
 	}
 
       return output;
+    }
+    
+    tf::Quaternion getEstimator()
+    {
+      typedef std::vector< BFL::WeightedSample<ColumnVector> > _SampleVec;
+
+      BFL::MCPdf<ColumnVector> * posterior = filter_->PostGet();
+      
+      _SampleVec const & samples = posterior->ListOfSamplesGet();
+
+      std::vector<tf::Quaternion> sample_quats;
+
+      for(_SampleVec::const_iterator sample_it = samples.begin(); sample_it != samples.end(); ++sample_it)
+	{
+	  ColumnVector const & sample = sample_it->ValueGet();
+
+	  sample_quats.push_back( tf::Quaternion(sample(2), sample(3), sample(4), sample(1)) );
+
+	}
+
+      return chugg::quaternionAverage(sample_quats);
     }
 
   private:
@@ -210,7 +253,7 @@ namespace chugg
       system_ = std::make_shared<_SystemModel>( system_pdf_.get() );
 
       ////////////////////////////////////////////////////////
-      /// Set up measurement PDF
+      /// Set up marker measurement PDF
       ////////////////////////////////////////////////////////
       MatrixWrapper::ColumnVector marker_measurement_mean(2);
       marker_measurement_mean = 0.0;
@@ -227,7 +270,28 @@ namespace chugg
 
       marker_measurement_.reset();
       marker_measurement_ = std::make_shared<_MeasurementModel>( marker_measurement_pdf_.get() );
+
+
+      ////////////////////////////////////////////////////////
+      // Set up IMU pdf//////////////////////////////////////
+      ////////////////////////////////////////////////////////
+      MatrixWrapper::ColumnVector imu_measurement_mean(1);
+      imu_measurement_mean = 0.0;
+      MatrixWrapper::SymmetricMatrix imu_measurement_cov(1);
+      imu_measurement_cov = config.imu_ori_vel_cov;
       
+      BFL::Gaussian imu_measurement_noise(imu_measurement_mean, imu_measurement_cov);      
+      
+      imu_measurement_pdf_.reset();
+      imu_measurement_pdf_ = std::make_shared<chugg::IMUMeasurementPDF>( imu_measurement_noise );
+
+      imu_measurement_.reset();
+      imu_measurement_ = std::make_shared<_MeasurementModel>( imu_measurement_pdf_.get() );
+
+      ////////////////////////////////////////////////////////
+      // Everything else//////////////////////////////////////
+      ////////////////////////////////////////////////////////
+
       /// Reset the filter with the new value for N samples
       // if( last_sample_count_ != config.samples )
       initializeFilter();
