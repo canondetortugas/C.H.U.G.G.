@@ -1,9 +1,12 @@
 import rospy
 
 from uscauv_common import DynamicReconfigureServer
-from motor_driver.cfg import MotorConfig
 
+from motor_driver.cfg import MotorConfig
 import motor_driver.constants as mdc
+from motor_driver.msg import Range
+
+import threading
 
 from math import pi
 
@@ -17,6 +20,18 @@ def rpm_to_rads(x):
 def rpm_to_volts(x, mn, mx):
     return float(x - mn)/float(mx - mn)*4.9 + 0.1
 
+def volts_to_rpm(v, mn, mx):
+    return clamp((v - 0.1)*(mx - mn)/4.9 + mn, mn, mx)
+
+def clamp(val, min_, max_):
+    if val < min_:
+        out = min_
+    elif val > max_:
+        out = max_
+    else:
+        out = val
+    return out
+
 class Motor:
 
     def __init__(self, bus, gpio, ns='~'):
@@ -26,8 +41,12 @@ class Motor:
         self.config = None
         self.dir = None
         self.address = None
+        self.thread = None
 
-        self.mode = mdc.MOTOR_MODES.keys()[0]
+        self.pub_rate = rospy.get_param(ns + '/' + 'pub_rate', 10.0)
+        self.pub = rospy.Publisher(ns + '/' + 'range', Range)
+
+        self.mode = mdc.MOTOR_MODES.values()[0]
 
         # ROS
         self.rc = DynamicReconfigureServer(MotorConfig, self.reconfigureCallback, ns)
@@ -44,7 +63,29 @@ class Motor:
             rospy.logerr('Using default address: 0x{:x}'.format(self.address))
             
         self.config = config
+
+        if not self.thread:
+            self.thread = threading.Thread(group=None, target=self.rangeThread)
+            self.lock = threading.Lock()
+            self.thread.start()
+
         return config
+
+    def setMode(self, mode):
+        with self.lock:
+            self.mode = mode
+
+    def publishRange(self):
+        msg = Range()
+        with self.lock:
+            msg.min = rpm_to_rads(self.mode.rng[0])
+            msg.max = rpm_to_rads(self.mode.rng[1])
+        self.pub.publish(msg)
+
+    def rangeThread(self):
+        while not rospy.is_shutdown():
+            self.publishRange()
+            rospy.sleep(1.0/self.pub_rate)
 
     # Velocity in radians / sec
     def setVelocity(self, vel):
@@ -73,12 +114,10 @@ class Motor:
         
     def __setVoltage(self, volts):
         
-        if volts < mdc.VOLTAGE_MIN:
-            volts = mdc.VOLTAGE_MIN
-        if volts > mdc.VOLTAGE_MAX:
-            volts = mdc.VOLTAGE_MAX
+        volts = clamp(volts, mdc.VOLTAGE_MIN, mdc.VOLTAGE_MAX)
 
         dn = int(volts/mdc.VOLTAGE_MAX*4095)
+        # dn = 2048             
         
         if not self.config.dummy_i2c:
             # Write using the MCP4725 "Write DAC register" mode (not fast write mode)

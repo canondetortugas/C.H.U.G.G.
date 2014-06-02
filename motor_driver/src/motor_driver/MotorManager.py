@@ -29,7 +29,7 @@ class MotorManager:
 
         # Update motor modes
         for motor in self.motors.itervalues():
-            motor.mode = new_mode
+            motor.setMode(new_mode)
         self.gpio.digitalWrite(config.dig1_pin, new_mode.pin1)
         self.gpio.digitalWrite(config.dig2_pin, new_mode.pin2)
             
