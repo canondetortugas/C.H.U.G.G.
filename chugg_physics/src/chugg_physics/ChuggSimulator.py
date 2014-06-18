@@ -57,6 +57,7 @@ class ChuggSimulator:
         self.ori = quat_mult(ori, deltaq)
 
         self.vel += wdot*dt
+        self.wheel_vel += wheel_acc*dt
         
     def setState(ori=(0,0,0,1), vel=(0,0,0), wheel_vel=None):
         if wheel_vel == None:
