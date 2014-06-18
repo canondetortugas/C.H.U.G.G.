@@ -1,0 +1,18 @@
+<launch>
+  <arg name="pkg" value="motor_driver" />
+  <arg name="name" value="motor_driver" />
+  <arg name="type" default="$(arg name)" />
+  <arg name="rate" default="60" />
+
+  <arg name="args" value="_loop_rate:=$(arg rate)" />
+
+  <rosparam command="load" file="$(find motor_driver)/params/motors.yaml" ns="motor_driver/motors" />
+
+  <node
+      pkg="$(arg pkg)"
+      type="$(arg type)"
+      name="$(arg name)"
+      args="$(arg args)"
+      output="screen" />
+ 
+</launch>

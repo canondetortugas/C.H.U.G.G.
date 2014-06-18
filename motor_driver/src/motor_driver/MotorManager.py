@@ -7,25 +7,29 @@ from uscauv_common import DynamicReconfigureServer
 from motor_driver.Motor import Motor
 from motor_driver.cfg import MotorManagerConfig
 
+import motor_driver.constants as mdc
+
 class MotorManager:
 
     def __init__(self, names, ns='~motors'):
         self.ns = ns
         wp.wiringPiSetupSys()
         self.gpio = wp
-        self.bus = smbus.SMBus( MotorManager.getPiI2CBusNumber() )
+        i2c_id = MotorManager.getPiI2CBusNumber()
+        rospy.loginfo('Opening i2c bus [ {} ]'.format(i2c_id))
+        self.bus = smbus.SMBus( i2c_id )
         
-        self.motors = {name: Motor(bus, gpio, ns + '/' + name) for name in names}
+        self.motors = {name: Motor(self.bus, self.gpio, ns + '/' + name) for name in names}
 
-        self.rc = DynamicReconfigureServer(MotorManagerConfig, reconfigureCallback, ns)
+        self.rc = DynamicReconfigureServer(MotorManagerConfig, self.reconfigureCallback, ns)
 
-    def reconfigureCallback(config, levels):
+    def reconfigureCallback(self, config, levels):
 
         new_mode = mdc.MOTOR_MODES[config.mode]
 
         # Update motor modes
-        for motor in self.motors.itervals():
-            motor.mode = new_mode
+        for motor in self.motors.itervalues():
+            motor.setMode(new_mode)
         self.gpio.digitalWrite(config.dig1_pin, new_mode.pin1)
         self.gpio.digitalWrite(config.dig2_pin, new_mode.pin2)
             
@@ -34,7 +38,7 @@ class MotorManager:
         self.config = config
         return config
 
-    def setMotorVelocity(name, vel):
+    def setMotorVelocity(self, name, vel):
         self.motors[name].setVelocity(vel)
 
     @staticmethod
@@ -53,4 +57,4 @@ class MotorManager:
     @staticmethod
     def getPiI2CBusNumber():
         # Gets the I2C bus number /dev/i2c#
-        return 1 if Adafruit_I2C.getPiRevision() > 1 else 0
+        return 1 if MotorManager.getPiRevision() > 1 else 0

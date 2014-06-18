@@ -91,6 +91,7 @@ private:
   
   bool ori_;
   int baud_rate_;
+  std::string com_port_;
 
   bool connected_;
   
@@ -124,6 +125,7 @@ private:
      {
        ori_ = uscauv::param::load<bool>(nh_rel_, "ori", false);
        baud_rate_ = uscauv::param::load<int>(nh_rel_, "baud_rate", 921600);
+       com_port_ = uscauv::param::load<std::string>(nh_rel_, "com_port", COM_PORT);
 
        bias_ = uscauv::param::load<tf::Vector3>(nh_rel_, "bias", tf::Vector3(0,0,0));
 
@@ -131,7 +133,7 @@ private:
 
        calibrate_server_ = nh_rel_.advertiseService("calibrate_rate", &ImuDriverNode::calibrateRate, this );
        
-       status_ = vn100_connect(&vn100_, COM_PORT, baud_rate_);
+       status_ = vn100_connect(&vn100_, com_port_.c_str(), baud_rate_);
        if(status_)
 	 {
 	   ROS_FATAL_STREAM("Failed to open IMU with error " << brk(status_map_.at(status_)));

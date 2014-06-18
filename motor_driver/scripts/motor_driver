@@ -2,8 +2,8 @@
 
 import rospy
 
-from motor_driver import MotorManager
-from geometry_msgs import Vector3
+from motor_driver.MotorManager import MotorManager
+from geometry_msgs.msg import Vector3
 
 class MotorDriverNode:
     
@@ -11,10 +11,10 @@ class MotorDriverNode:
         
         self.drv = MotorManager(('x', 'y', 'z'), '~motors')
         
-        self.sub = rospy.Subscriber('target_vel', Vector3, velocityCallback)
+        self.sub = rospy.Subscriber('~target_vel', Vector3, self.velocityCallback)
 
 
-    def velocityCallback(msg):
+    def velocityCallback(self, msg):
         self.drv.setMotorVelocity('x', msg.x)
         self.drv.setMotorVelocity('y', msg.y)
         self.drv.setMotorVelocity('z', msg.z)
