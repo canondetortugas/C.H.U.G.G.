@@ -1,1 +1,1 @@
-__all__=['ChuggSimulator']
+__all__=['ChuggSimulator', 'ROSChuggSimulator']

@@ -1,30 +1,35 @@
 import numpy as np
-from collections import OrderedDict
 
 # Wheels: {x: {axis: (x,y,z), J: 9}}
-
-default_I = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
-default_wheels = [{'axis': (-1, 0, 0), 'J': 0.5}, 
-                  {'axis': (0, -1, 0), 'J': 0.5}, 
-                  {'axis': (0, 0, -1), 'J': 0.5} ]
 
 def axisangle_to_quat(axis, angle):
     return np.hstack(( axis*np.sin(angle/2), np.cos(angle/2)))
 
 def quat_mult(p,q):
     ''' Perform quaternion product q*p'''
-    return np.array([p[0]*q[0] - (p[1]*q[1] + p[2]*q[2] + p[3]*q[3]),
-                  p[0]*q[1] + q[0]*p[1] + p[2]*q[3] - p[3]*q[2],
-                  p[0]*q[2] + q[0]*p[2] + p[3]*q[1] - p[1]*q[3],
-                  p[0]*q[3] + q[0]*p[3] + p[1]*q[2] - p[2]*q[1]])
+    return np.array([p[0]*q[1] + q[0]*p[1] + p[2]*q[3] - p[3]*q[2],
+                     p[0]*q[2] + q[0]*p[2] + p[3]*q[1] - p[1]*q[3],
+                     p[0]*q[3] + q[0]*p[3] + p[1]*q[2] - p[2]*q[1],
+                     p[0]*q[0] - (p[1]*q[1] + p[2]*q[2] + p[3]*q[3])])
 
+def normalize(q):
+    return q / numpy.linalg.norm(q)
+
+# Quaternion: (x, y, z, w)
+# TODO: Check whether or not we are setting wheel vel correctly.
+# I don't think we are, because under the current model the wheels don't move if we apply a torque to the cube,
+# which doesn't really make sense
 class ChuggSimulator:
+    default_I = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+    default_wheels = [{'axis': (-1, 0, 0), 'J': 0.5}, 
+                      {'axis': (0, -1, 0), 'J': 0.5}, 
+                      {'axis': (0, 0, -1), 'J': 0.5} ]
 
     def __init__(self, I=None, wheels=None):
         if I is None:
-            I = default_I
+            I = ChuggSimulator.default_I
         if wheels is None:
-            wheels = default_wheels
+            wheels = ChuggSimulator.default_wheels
 
         self.I = np.matrix(I)
         self.wheels = wheels
@@ -54,6 +59,8 @@ class ChuggSimulator:
         O = self.wheel_vel
         Odot = np.array(wheel_acc)
 
+        h = self.J.dot((O + self.G.transpose().dot(w)).A1)
+
         wdot = ((self.I + self.Jp).getI().dot(
                 (-np.cross(self.vel, self.I.dot(self.vel)) - self.G.dot(self.J).dot(Odot)
                   - np.cross(self.vel, self.G.dot(h)) + ext_torque).A1)).A1
@@ -63,13 +70,16 @@ class ChuggSimulator:
             theta = np.linalg.norm(self.vel)*dt
             axis = self.vel / np.linalg.norm(self.vel)
             deltaq = axisangle_to_quat(axis, theta)
-            self.ori = quat_mult(self.ori, deltaq)
-
+        else:
+            deltaq = np.array((0,0,0,1))
+            
+        self.ori = quat_mult(self.ori, deltaq)
+            
         self.vel += wdot*dt
-
+        
         self.wheel_pos += self.wheel_vel*dt
         self.wheel_pos %= (2*np.pi)
-
+        
         self.wheel_vel += Odot*dt
         
     def setState(self, ori=(0,0,0,1), vel=(0,0,0), wheel_vel=None, wheel_pos = None):
