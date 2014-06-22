@@ -24,6 +24,7 @@ class ChuggSimulator:
     default_wheels = [{'axis': (-1, 0, 0), 'J': 0.5}, 
                       {'axis': (0, -1, 0), 'J': 0.5}, 
                       {'axis': (0, 0, -1), 'J': 0.5} ]
+    dtype=np.float64
 
     def __init__(self, I=None, wheels=None):
         if I is None:
@@ -54,22 +55,25 @@ class ChuggSimulator:
         
         if ext_torque is None:
             ext_torque = np.array((0.0,0.0,0.0))
-
+        else:
+            ext_torque = np.array(ext_torque, dtype=ChuggSimulator.dtype)
+            
         w = self.vel
         O = self.wheel_vel
-        Odot = np.array(wheel_acc)
+        Odot = np.array(wheel_acc, dtype=ChuggSimulator.dtype)
 
         h = self.J.dot((O + self.G.transpose().dot(w)).A1)
 
         wdot = ((self.I + self.Jp).getI().dot(
                 (-np.cross(self.vel, self.I.dot(self.vel)) - self.G.dot(self.J).dot(Odot)
                   - np.cross(self.vel, self.G.dot(h)) + ext_torque).A1)).A1
-
+        
         # Integrate
         if np.linalg.norm(self.vel) != 0.0:
             theta = np.linalg.norm(self.vel)*dt
             axis = self.vel / np.linalg.norm(self.vel)
             deltaq = axisangle_to_quat(axis, theta)
+            # print h, wdot
         else:
             deltaq = np.array((0,0,0,1))
             
@@ -86,11 +90,14 @@ class ChuggSimulator:
         if wheel_vel == None:
             wheel_vel =  np.zeros(len(self.wheels))
         else:
-            wheel_vel = np.array(wheel_vel)
+            wheel_vel = np.array(wheel_vel, dtype=ChuggSimulator.dtype)
         if wheel_pos == None:
             wheel_pos = np.zeros(len(self.wheels))
         else:
-            wheel_pos = np.array([x % (2*np.pi) for x in wheel_pos])
+            wheel_pos = np.array([x % (2*np.pi) for x in wheel_pos], 
+                                 dtype=ChuggSimulator.dtype)
         
-        self.ori = np.array(ori)
-        self.vel = np.array(vel)
+        self.ori = np.array(ori, dtype=ChuggSimulator.dtype)
+        self.vel = np.array(vel, dtype=ChuggSimulator.dtype)
+        self.wheel_vel = wheel_vel
+        self.wheel_pos = wheel_pos
