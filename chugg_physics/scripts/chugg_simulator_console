@@ -19,6 +19,8 @@ if __name__=='__main__':
         sim.setExternalTorque(torque)
     def setState(*args, **kwargs):
         sim.setState(*args, **kwargs)
+    def resetState():
+        sim.setState()
 
     embed()
     rospy.signal_shutdown('')

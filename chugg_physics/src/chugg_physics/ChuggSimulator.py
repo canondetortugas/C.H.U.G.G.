@@ -7,10 +7,10 @@ def axisangle_to_quat(axis, angle):
 
 def quat_mult(p,q):
     ''' Perform quaternion product q*p'''
-    return np.array([p[0]*q[1] + q[0]*p[1] + p[2]*q[3] - p[3]*q[2],
-                     p[0]*q[2] + q[0]*p[2] + p[3]*q[1] - p[1]*q[3],
-                     p[0]*q[3] + q[0]*p[3] + p[1]*q[2] - p[2]*q[1],
-                     p[0]*q[0] - (p[1]*q[1] + p[2]*q[2] + p[3]*q[3])])
+    return np.array([p[3]*q[0] + q[3]*p[0] + p[1]*q[2] - p[2]*q[1],
+                     p[3]*q[1] + q[3]*p[1] + p[2]*q[0] - p[0]*q[2],
+                     p[3]*q[2] + q[3]*p[2] + p[0]*q[1] - p[1]*q[0],
+                     p[3]*q[3] - (p[0]*q[0] + p[1]*q[1] + p[2]*q[2])])
 
 def normalize(q):
     return q / numpy.linalg.norm(q)
