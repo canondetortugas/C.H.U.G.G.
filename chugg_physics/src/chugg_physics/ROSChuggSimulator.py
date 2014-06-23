@@ -5,6 +5,7 @@ import rospy
 import tf
 
 from chugg_physics.ChuggSimulator import ChuggSimulator
+from chugg_physics.ChuggSimulator import quat_mult, axisangle_to_quat
 
 class ROSChuggSimulator(ChuggSimulator):
     def __init__(self):
@@ -61,6 +62,14 @@ class ROSChuggSimulator(ChuggSimulator):
 
             self.tb.sendTransform((0.0,0.0,0.0), self.ori, self.last_update_time, 
                                   "chugg/ori/sim", "/world")
+            
+            # Publish wheel transforms
+            for (name, at, pos, angle) in zip(self.wheel_names, self.axis_transforms, self.wheel_positions, self.wheel_pos):
+                # Rotation about the wheel's axis in a coordinate frame fixed with its x axis aligned with the wheel axis
+                wpc = axisangle_to_quat(np.array((1.0, 0.0, 0.0)), angle)
+                ori = quat_mult(at, wpc)
+                self.tb.sendTransform(pos, ori, self.last_update_time,
+                                      'chugg/wheels/{}'.format(name), 'chugg/ori/sim')
             
             if self.is_shutdown:
                 break

@@ -2,6 +2,9 @@ import numpy as np
 
 # Wheels: {x: {axis: (x,y,z), J: 9}}
 
+def normalize(q):
+    return q / np.linalg.norm(q)
+
 def axisangle_to_quat(axis, angle):
     return np.hstack(( axis*np.sin(angle/2), np.cos(angle/2)))
 
@@ -12,8 +15,18 @@ def quat_mult(p,q):
                      p[3]*q[2] + q[3]*p[2] + p[0]*q[1] - p[1]*q[0],
                      p[3]*q[3] - (p[0]*q[0] + p[1]*q[1] + p[2]*q[2])])
 
-def normalize(q):
-    return q / numpy.linalg.norm(q)
+def quat_between(v, w):
+    '''Quaternion that takes vector v into vector w'''
+    v = normalize(v)
+    w = normalize(w)
+    if all(v == w):
+        return np.array((0.0, 0.0, 0.0, 1.0))
+    elif all(v == -w):
+        return np.array((0.0, 0.0, 0.0, -1.0))
+    else:
+        axis = np.cross(v, w)
+        angle = np.arccos(np.dot(v, w))
+        return axisangle_to_quat(axis, angle)
 
 # Quaternion: (x, y, z, w)
 # TODO: Check whether or not we are setting wheel vel correctly.
@@ -21,9 +34,9 @@ def normalize(q):
 # which doesn't really make sense
 class ChuggSimulator:
     default_I = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
-    default_wheels = [{'axis': (-1, 0, 0), 'J': 0.5}, 
-                      {'axis': (0, -1, 0), 'J': 0.5}, 
-                      {'axis': (0, 0, -1), 'J': 0.5} ]
+    default_wheels = [{'axis': (1, 0, 0), 'J': 0.5, 'pos': (-0.122, 0, 0), 'ori': (0.0, 0.0, 0.0, 1.0), 'name': 'x'},
+                      {'axis': (0, 1, 0), 'J': 0.5, 'pos': (0, -0.122, 0), 'ori': (0.0, 0.0, 0.0, 1.0), 'name': 'y'},
+                      {'axis': (0, 0, -1), 'J': 0.5, 'pos': (0, 0, .122), 'ori': (0.0, 0.0, 0.0, 1.0), 'name': 'z'} ]
     dtype=np.float64
 
     def __init__(self, I=None, wheels=None):
@@ -40,6 +53,11 @@ class ChuggSimulator:
         
         # Horizontal concatenation. G is Nx3
         self.G = np.concatenate( [ np.matrix(g['axis']).transpose() for g in self.wheels], axis=1)
+        
+        self.axis_transforms = [quat_between(np.array((1.0,0.0,0.0)), np.array(g['axis'])) for g in self.wheels]
+        self.wheel_names = [g['name'] for g in self.wheels]
+        self.wheel_positions = [np.array(g['pos'], dtype=ChuggSimulator.dtype) for g in self.wheels]
+        self.wheel_orientations = [np.array(g['ori'], dtype=ChuggSimulator.dtype) for g in self.wheels]
 
         self.Jp = self.G.dot(self.J.dot(self.G.transpose() ) )
 

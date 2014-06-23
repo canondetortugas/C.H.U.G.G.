@@ -20,9 +20,6 @@
     </include>
   </group>
 
-  
-
-  
   <include file="$(find chugg_model)/launch/chugg_model.launch" />
 
 </launch>
