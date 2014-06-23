@@ -13,6 +13,8 @@ Panels:
         - /PointCloud22
         - /Image1
         - /Image2
+        - /RobotModel1
+        - /RobotModel1/Status1
       Splitter Ratio: 0.5
     Tree Height: 866
   - Class: rviz/Selection
@@ -60,13 +62,22 @@ Visualization Manager:
       Frame Timeout: 1
       Frames:
         All Enabled: false
-      Marker Scale: 1
+        chugg/cm:
+          Value: true
+        chugg/ori/sim:
+          Value: true
+        world:
+          Value: true
+      Marker Scale: 0.5
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: true
       Tree:
-        {}
+        world:
+          chugg/ori/sim:
+            chugg/cm:
+              {}
       Update Interval: 0
       Value: true
     - Class: rviz/Marker
@@ -157,6 +168,27 @@ Visualization Manager:
       Queue Size: 2
       Transport Hint: raw
       Value: true
+    - Alpha: 0.2
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        chugg/cm:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Name: RobotModel
+      Robot Description: /chugg/robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -181,7 +213,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 4.03443
+      Distance: 2.17528
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
@@ -193,10 +225,10 @@ Visualization Manager:
         Z: 0
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.720204
+      Pitch: 0.555203
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.9963
+      Yaw: 0.538116
     Saved: ~
 Window Geometry:
   Displays:

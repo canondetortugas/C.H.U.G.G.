@@ -1,0 +1,16 @@
+<launch>
+
+  <arg name="frame" default="chugg/ori/sim" />
+
+  <group ns="chugg" >
+
+    <param name="robot_description" textfile="$(find chugg_model)/urdf/chugg.urdf" />
+
+    <node pkg="robot_state_publisher" type="robot_state_publisher" name="state_publisher" />    
+
+    <node name="pose_to_cm_tf" type="static_transform_publisher" pkg="tf" 
+	  args="0 0 0 0 0 0 $(arg frame) chugg/cm 100" />
+
+  </group>
+
+</launch>

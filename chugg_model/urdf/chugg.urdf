@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<robot name="chugg">
+  <!-- Cube side length is about 9+9/16" - .243m -->
+  <link name="chugg/cm" >
+    <visual name="body_visual" >
+      <material name="body_material" >
+	<color rgba="0 1 0.2 1" />
+      </material>
+
+      <origin rpy="0 0 0"
+      	      xyz="0 0 0" />
+      <geometry name="body_geometry" >
+	<box size="0.243 0.243 0.243" />
+      </geometry>
+
+      <!-- Don't have a suitable mesh yet -->
+      <!-- <origin rpy="0 0 3.1415926535897932384626433832795028841971693993751"  -->
+      <!-- 	      xyz="0 0 0" /> -->
+      <!-- <geometry name="body_geometry" > -->
+      <!-- 	<mesh filename="package://chugg_model/stl/CubeSat3_binary_m.STL" /> -->
+      <!-- </geometry> -->
+    </visual>
+  </link>
+
+</robot>

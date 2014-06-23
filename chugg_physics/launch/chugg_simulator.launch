@@ -1,0 +1,6 @@
+<launch>
+
+  <node type="chugg_simulator_console" pkg="chugg_physics" name="chugg_simulator"
+	launch-prefix="xterm -bg rgb:00/30/30 -e" />
+
+</launch>
