@@ -14,7 +14,6 @@ Panels:
         - /Image1
         - /Image2
         - /RobotModel1
-        - /RobotModel1/Status1
       Splitter Ratio: 0.5
     Tree Height: 866
   - Class: rviz/Selection
@@ -66,17 +65,29 @@ Visualization Manager:
           Value: true
         chugg/ori/sim:
           Value: true
+        chugg/wheels/x:
+          Value: true
+        chugg/wheels/y:
+          Value: true
+        chugg/wheels/z:
+          Value: true
         world:
           Value: true
       Marker Scale: 0.5
       Name: TF
       Show Arrows: true
       Show Axes: true
-      Show Names: true
+      Show Names: false
       Tree:
         world:
           chugg/ori/sim:
             chugg/cm:
+              {}
+            chugg/wheels/x:
+              {}
+            chugg/wheels/y:
+              {}
+            chugg/wheels/z:
               {}
       Update Interval: 0
       Value: true

@@ -32,6 +32,9 @@ class ROSChuggSimulator(ChuggSimulator):
     def setWheelAcc(self, acc):
         self.next_wheel_acc = acc
 
+    def setWheelTorque(self, tq):
+        self.next_wheel_acc = np.matrix(self.J).getI().dot(tq).A1
+
     def setExternalTorque(self, torque):
         self.next_ext_torque = torque
 
