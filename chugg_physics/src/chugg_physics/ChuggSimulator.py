@@ -28,15 +28,59 @@ def quat_between(v, w):
         angle = np.arccos(np.dot(v, w))
         return axisangle_to_quat(axis, angle)
 
+def quat_to_rotation_matrix(q):
+    '''Transform a quaternion representing a clockwise rotation 
+    around an axis by its angle into a rotation matrix representing
+    the same transformation'''
+    q0 = q[3]
+    q1 = q[0]
+    q2 = q[1]
+    q3 = q[2]
+
+    return np.array([[2*q0**2 - 1 + 2*q1**2, 2*q1*q2 + 2*q0*q3, 2*q1*q3 - 2*q0*q2],
+                      [2*q1*q2-2*q0*q3, 2*q0**2 - 1 + 2*q2**2, 2*q2*q3 + 2*q0*q1],
+                      [2*q1*q3 + 2*q0*q2, 2*q2*q3 - 2*q0*q1, 2*q0**2 - 1 + 2*q3**2]])
+
+def translation_to_inertial_matrix(t):
+    '''Compute the componenent of the inertial matrix of a body due to 
+    its center of mass being offset by t from the frame in which 
+    the inertial matrix is being calculated'''
+    tx = t[0]
+    ty = t[1]
+    tz = t[2]
+    
+    txx = ty**2 + tz**2
+    tyy = tx**2 + tz**2
+    tzz = tx**2 + ty**2
+    txy = tx*ty
+    txz = tx*tz
+    tyz = ty*tz
+
+    return np.array([[txx, -txy, -txz],
+                    [-txy, tyy, -tyz],
+                    [-txy, -tyz, tzz]])
+
+def matrix_inverse(A):
+    '''Inverse of a 2D numpy ndarray'''
+    return np.matrix(A).getI().A
+
+class Wheel():
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
 # Quaternion: (x, y, z, w)
 # TODO: Check whether or not we are setting wheel vel correctly.
 # I don't think we are, because under the current model the wheels don't move if we apply a torque to the cube,
 # which doesn't really make sense
 class ChuggSimulator:
-    default_I = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
-    default_wheels = [{'axis': (1, 0, 0), 'J': 0.5, 'pos': (-0.122, 0, 0), 'ori': (0.0, 0.0, 0.0, 1.0), 'name': 'x'},
-                      {'axis': (0, 1, 0), 'J': 0.5, 'pos': (0, -0.122, 0), 'ori': (0.0, 0.0, 0.0, 1.0), 'name': 'y'},
-                      {'axis': (0, 0, -1), 'J': 0.5, 'pos': (0, 0, .122), 'ori': (0.0, 0.0, 0.0, 1.0), 'name': 'z'} ]
+    default_I = [[.57, 0, 0], [0, .57, 0], [0, 0, .57]]
+    default_J = [[0.007, 0, 0], [0, 0.0035, 0], [0, 0, 0.0035]]
+    default_wheels = [{'axis': (1, 0, 0), 'J': default_J, 'mass': 0.2086525,
+                       'pos': (-0.122, 0, 0), 'ori': (0.0, 0.0, 0.0, 1.0), 'name': 'x'},
+                      {'axis': (0, 1, 0), 'J': default_J, 'mass': 0.2086525,
+                       'pos': (0, -0.122, 0), 'ori': (0.0, 0.0, np.sqrt(2.0)/2.0, np.sqrt(2.0)/2.0), 'name': 'y'},
+                      {'axis': (0, 0, -1), 'J': default_J, 'mass': 0.2086525,
+                       'pos': (0, 0, .122), 'ori': (0.0, np.sqrt(2.0)/2.0, 0.0, np.sqrt(2.0)/2.0), 'name': 'z'} ]
     dtype=np.float64
 
     def __init__(self, I=None, wheels=None):
@@ -45,23 +89,40 @@ class ChuggSimulator:
         if wheels is None:
             wheels = ChuggSimulator.default_wheels
 
-        self.I = np.matrix(I)
-        self.wheels = wheels
-        self.n = len(self.wheels)
+        self.I = np.array(I)
 
-        self.J = np.diag( [x['J'] for x in self.wheels] )
+        #####################################################
+        # Set up wheel data##################################
+        #####################################################
+        self.n = len(wheels)
+        self.wheels = []
+
+        for wheel in wheels:
+            
+            t = np.array(wheel['pos'])
+            q = np.array(wheel['ori'])
+            m = wheel['mass']
+            name = wheel['name']
+            ax = np.array(wheel['axis'])
+            J = wheel['J']
+
+            R = quat_to_rotation_matrix(q)
+            U = translation_to_inertial_matrix(t)
+
+            total_inertia = R.dot(J).dot(R.transpose()) + m*U
+
+            at = quat_between(np.array((1.0,0.0,0.0)), ax)
+            
+            w = Wheel(t=t, q=q, m=m, name=name, axis=ax, J=J, R=R, U=U, I=total_inertia, axis_transform=at)
+            
+            self.wheels.append(w)
+
+        self.static_wheel_inertia = np.sum([w.I for w in self.wheels], 0)
+
+        #####################################################
+        # State##############################################
+        #####################################################
         
-        # Horizontal concatenation. G is Nx3
-        self.G = np.concatenate( [ np.matrix(g['axis']).transpose() for g in self.wheels], axis=1)
-        
-        self.axis_transforms = [quat_between(np.array((1.0,0.0,0.0)), np.array(g['axis'])) for g in self.wheels]
-        self.wheel_names = [g['name'] for g in self.wheels]
-        self.wheel_positions = [np.array(g['pos'], dtype=ChuggSimulator.dtype) for g in self.wheels]
-        self.wheel_orientations = [np.array(g['ori'], dtype=ChuggSimulator.dtype) for g in self.wheels]
-
-        self.Jp = self.G.dot(self.J.dot(self.G.transpose() ) )
-
-        # System state
         self.ori = np.array((0.0,0.0,0.0,1.0))
         self.vel = np.array((0.0,0.0,0.0))
         self.wheel_vel = np.zeros(len(wheels))
@@ -75,17 +136,31 @@ class ChuggSimulator:
             ext_torque = np.array((0.0,0.0,0.0))
         else:
             ext_torque = np.array(ext_torque, dtype=ChuggSimulator.dtype)
+            # print ext_torque
             
         w = self.vel
         O = self.wheel_vel
         Odot = np.array(wheel_acc, dtype=ChuggSimulator.dtype)
 
-        h = self.J.dot((O + self.G.transpose().dot(w)).A1)
-
-        wdot = ((self.I + self.Jp).getI().dot(
-                (-np.cross(self.vel, self.I.dot(self.vel)) - self.G.dot(self.J).dot(Odot)
-                  - np.cross(self.vel, self.G.dot(h)) + ext_torque).A1)).A1
+        total_wheel_momentum = np.zeros(3)
+        total_wheel_torque = np.zeros(3)
         
+        for (wheel, o, odot) in zip(self.wheels, O, Odot):
+            v = wheel.axis*o
+            vdot = wheel.axis*odot
+            # print w.I, v
+            total_wheel_momentum += wheel.I.dot(v)
+            total_wheel_torque += wheel.I.dot(vdot)
+
+        
+
+        # Total angular momentum
+        M = self.I.dot(w) + self.static_wheel_inertia.dot(w) + total_wheel_momentum
+        
+        # Angular acceleration
+        
+        wdot = matrix_inverse(self.I + self.static_wheel_inertia).dot(ext_torque - total_wheel_torque - np.cross(w, M))
+
         # Integrate
         if np.linalg.norm(self.vel) != 0.0:
             theta = np.linalg.norm(self.vel)*dt

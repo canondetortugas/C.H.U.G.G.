@@ -30,10 +30,19 @@ class ROSChuggSimulator(ChuggSimulator):
         self.thread.start()
     
     def setWheelAcc(self, acc):
+        if len(acc) != self.n:
+            rospy.logwarn("Wrong number of reaction wheels. Ignoring...")
+            return
+            
         self.next_wheel_acc = acc
 
     def setWheelTorque(self, tq):
-        self.next_wheel_acc = np.matrix(self.J).getI().dot(tq).A1
+        if len(tq) != self.n:
+            rospy.logwarn("Wrong number of reaction wheels. Ignoring...")
+            return
+        
+        print "DISABLED!"
+        # self.next_wheel_acc = np.matrix(self.J).getI().dot(tq).A1
 
     def setExternalTorque(self, torque):
         self.next_ext_torque = torque
@@ -56,7 +65,7 @@ class ROSChuggSimulator(ChuggSimulator):
                 self.next_wheel_acc = None
 
             if self.next_ext_torque is None:
-                torque = np.zeros(3)
+                torque = None
             else:
                 torque = self.next_ext_torque
                 self.next_ext_torque = None
@@ -67,12 +76,12 @@ class ROSChuggSimulator(ChuggSimulator):
                                   "chugg/ori/sim", "/world")
             
             # Publish wheel transforms
-            for (name, at, pos, angle) in zip(self.wheel_names, self.axis_transforms, self.wheel_positions, self.wheel_pos):
+            for (wheel, angle) in zip(self.wheels, self.wheel_pos):
                 # Rotation about the wheel's axis in a coordinate frame fixed with its x axis aligned with the wheel axis
                 wpc = axisangle_to_quat(np.array((1.0, 0.0, 0.0)), angle)
-                ori = quat_mult(at, wpc)
-                self.tb.sendTransform(pos, ori, self.last_update_time,
-                                      'chugg/wheels/{}'.format(name), 'chugg/ori/sim')
+                ori = quat_mult(wheel.axis_transform, wpc)
+                self.tb.sendTransform(wheel.t, ori, self.last_update_time,
+                                      'chugg/wheels/{}'.format(wheel.name), 'chugg/ori/sim')
             
             if self.is_shutdown:
                 break
