@@ -67,9 +67,15 @@ class Motor:
         if not self.thread:
             self.thread = threading.Thread(group=None, target=self.rangeThread)
             self.lock = threading.Lock()
+            self.is_shutdown = False
+            rospy.on_shutdown(self.cleanup)
             self.thread.start()
 
         return config
+    
+    def cleanup(self):
+        self.is_shutdown = True
+        self.thread.join()
 
     def setMode(self, mode):
         with self.lock:
@@ -83,7 +89,7 @@ class Motor:
         self.pub.publish(msg)
 
     def rangeThread(self):
-        while not rospy.is_shutdown():
+        while not rospy.is_shutdown() and not self.is_shudown:
             self.publishRange()
             rospy.sleep(1.0/self.pub_rate)
 

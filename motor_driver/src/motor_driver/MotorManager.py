@@ -23,6 +23,8 @@ class MotorManager:
 
         self.rc = DynamicReconfigureServer(MotorManagerConfig, self.reconfigureCallback, ns)
 
+        rospy.on_shutdown(self.cleanup)
+
     def reconfigureCallback(self, config, levels):
 
         new_mode = mdc.MOTOR_MODES[config.mode]
@@ -58,3 +60,8 @@ class MotorManager:
     def getPiI2CBusNumber():
         # Gets the I2C bus number /dev/i2c#
         return 1 if MotorManager.getPiRevision() > 1 else 0
+
+    def cleanup(self):
+        if self.gpio is not None and self.config is not None:
+            rospy.loginfo('Shutdown detected. Disabling motors.')
+            self.gpio.digitalWrite(config.enable_pin, False)
