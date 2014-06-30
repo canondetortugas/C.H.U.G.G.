@@ -16,6 +16,9 @@ class DigMode:
 VOLTAGE_MIN = 0.0
 VOLTAGE_MAX = 5.0
 
+MOTOR_MAX_RPM = 10000
+MOTOR_MIN_RPM = -10000
+
 DEFAULT_MOTOR_ADDRESS = '0x60'
 
 # All GPIO pins except those used for I2C

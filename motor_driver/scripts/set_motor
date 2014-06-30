@@ -1,0 +1,29 @@
+#!/usr/bin/env python
+
+import rospy
+
+from geometry_msgs.msg import Vector3
+
+from motor_driver.cfg import SetMotorConfig
+
+from uscauv_common import DynamicReconfigureServer
+
+if __name__=='__main__':
+
+    rospy.init_node('set_motor')
+    
+    pub = rospy.Publisher('motor_driver/target_vel', Vector3)
+
+    def reconfigureCallback(config, levels):
+        msg = Vector3()
+        msg.x = config.x
+        msg.y = config.y
+        msg.z = config.z
+        pub.publish(msg)
+        return config
+
+    rc = DynamicReconfigureServer(SetMotorConfig, reconfigureCallback, 'set_motor')
+
+    rospy.loginfo("SetMotor node is spinning.")
+
+    rospy.spin()

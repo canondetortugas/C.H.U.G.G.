@@ -18,6 +18,7 @@ catkin_python_setup()
 generate_dynamic_reconfigure_options(
   cfg/Motor.cfg
   cfg/MotorManager.cfg
+  cfg/SetMotor.cfg
 )
 
 ################################################
