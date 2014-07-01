@@ -106,11 +106,11 @@ class Motor:
             # Use positive motor direction as the default direction
             dirn = mdc.POSITIVE_MOTOR_DIR
         else:
-            rpm = rads_to_rpm(vel)
             if mdc.POSITIVE_MOTOR_DIR == mdc.CCW:
                 dirn = 1 if vel >= 0 else 0
             elif mdc.POSITIVE_MOTOR_DIR == mdc.CW:
                 dirn = 0 if vel >= 0 else 1
+            rpm = rads_to_rpm(vel if vel >= 0 else -vel)
 
         if dirn != self.dirn:
             self.gpio.digitalWrite(self.config.dir_pin, dirn)
@@ -121,8 +121,11 @@ class Motor:
 
         
     def __setVoltage(self, volts):
-        
+        # print "Volts in ", volts
+
         volts = clamp(volts, mdc.VOLTAGE_MIN, mdc.VOLTAGE_MAX)
+
+        # rospy.loginfo('Motor [ {} ] setting output voltage to [ {} ]'.format(self.ns, volts))
 
         dn = int(volts/mdc.VOLTAGE_MAX*4095)
         # dn = 2048             
