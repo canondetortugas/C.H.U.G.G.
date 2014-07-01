@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from math import pi
 import rospy
 
 from geometry_msgs.msg import Vector3
@@ -16,9 +17,9 @@ if __name__=='__main__':
 
     def reconfigureCallback(config, levels):
         msg = Vector3()
-        msg.x = config.x
-        msg.y = config.y
-        msg.z = config.z
+        msg.x = config.x * 2 * pi / 60.0
+        msg.y = config.y * 2 * pi / 60.0
+        msg.z = config.z * 2 * pi / 60.0
         pub.publish(msg)
         return config
 

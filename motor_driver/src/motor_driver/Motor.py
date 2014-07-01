@@ -10,7 +10,7 @@ import threading
 
 from math import pi
 
-RPM_TO_RADS=2*pi/60.0
+RPM_TO_RADS=mdc.RPM_TO_RADS
 
 def rads_to_rpm(x):
     return x/RPM_TO_RADS
@@ -39,7 +39,7 @@ class Motor:
         self.bus = bus
         self.gpio = gpio
         self.config = None
-        self.dir = None
+        self.dirn = None
         self.address = None
         self.thread = None
 
@@ -70,6 +70,8 @@ class Motor:
             self.is_shutdown = False
             rospy.on_shutdown(self.cleanup)
             self.thread.start()
+            rospy.loginfo('Initializing motor [ {} ] to [ {} ] rad/s'.format(ns, mdc.MOTOR_MIN_RADS_ABS))
+            self.setVelocity(mdc.MOTOR_MIN_RADS_ABS)
 
         return config
     
@@ -102,17 +104,17 @@ class Motor:
             # Minimum RPM for the current mode
             rpm = self.mode.rng[0]
             # Use positive motor direction as the default direction
-            dir = mdc.POSITIVE_MOTOR_DIR
+            dirn = mdc.POSITIVE_MOTOR_DIR
         else:
             rpm = rads_to_rpm(vel)
             if mdc.POSITIVE_MOTOR_DIR == mdc.CCW:
-                dir = 1 if vel >= 0 else 0
+                dirn = 1 if vel >= 0 else 0
             elif mdc.POSITIVE_MOTOR_DIR == mdc.CW:
-                dir = 0 if vel >= 0 else 1
+                dirn = 0 if vel >= 0 else 1
 
-        if dir != self.dir:
-            self.gpio.digitalWrite(self.config.dir_pin, dir)
-            self.dir = dir
+        if dirn != self.dirn:
+            self.gpio.digitalWrite(self.config.dir_pin, dirn)
+            self.dirn = dirn
             
         v = rpm_to_volts(rpm, self.mode.rng[0], self.mode.rng[1])
         self.__setVoltage(v + self.config.offset_voltage)

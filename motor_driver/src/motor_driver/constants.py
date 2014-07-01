@@ -1,6 +1,8 @@
 from dynamic_reconfigure.parameter_generator_catkin import int_t
 from dynamic_reconfigure.parameter_generator_catkin import str_t
 
+RPM_TO_RADS=2*pi/60.0
+
 CW = 0
 CCW = 1
 
@@ -18,6 +20,12 @@ VOLTAGE_MAX = 5.0
 
 MOTOR_MAX_RPM = 10000
 MOTOR_MIN_RPM = -10000
+
+MOTOR_MAX_RPM_ABS = MOTOR_MAX_RPM
+MOTOR_MIN_RPM_ABS = 62
+
+MOTOR_MAX_RADS_ABS = MOTOR_MAX_RPM_ABS*RPM_TO_RADS
+MOTOR_MIN_RADS_ABS = MOTOR_MIN_RPM_ABS*RPM_TO_RADS
 
 DEFAULT_MOTOR_ADDRESS = '0x60'
 
