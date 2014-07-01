@@ -1,6 +1,8 @@
 from dynamic_reconfigure.parameter_generator_catkin import int_t
 from dynamic_reconfigure.parameter_generator_catkin import str_t
 
+from math import pi
+
 RPM_TO_RADS=2*pi/60.0
 
 CW = 0

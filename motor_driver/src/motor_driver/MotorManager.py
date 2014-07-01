@@ -64,4 +64,4 @@ class MotorManager:
     def cleanup(self):
         if self.gpio is not None and self.config is not None:
             rospy.loginfo('Shutdown detected. Disabling motors.')
-            self.gpio.digitalWrite(config.enable_pin, False)
+            self.gpio.digitalWrite(self.config.enable_pin, False)

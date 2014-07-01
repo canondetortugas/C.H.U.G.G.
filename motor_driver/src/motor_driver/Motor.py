@@ -70,7 +70,7 @@ class Motor:
             self.is_shutdown = False
             rospy.on_shutdown(self.cleanup)
             self.thread.start()
-            rospy.loginfo('Initializing motor [ {} ] to [ {} ] rad/s'.format(ns, mdc.MOTOR_MIN_RADS_ABS))
+            rospy.loginfo('Initializing motor [ {} ] to [ {} ] rad/s'.format(self.ns, mdc.MOTOR_MIN_RADS_ABS))
             self.setVelocity(mdc.MOTOR_MIN_RADS_ABS)
 
         return config
@@ -91,7 +91,7 @@ class Motor:
         self.pub.publish(msg)
 
     def rangeThread(self):
-        while not rospy.is_shutdown() and not self.is_shudown:
+        while not rospy.is_shutdown() and not self.is_shutdown:
             self.publishRange()
             rospy.sleep(1.0/self.pub_rate)
 
