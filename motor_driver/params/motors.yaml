@@ -1,8 +1,17 @@
 dig1_pin: 23
 dig2_pin: 24
-enable_pin: 18
+enable_pin: 25
 hard_disable: false
 mode: high
 x: {address: '0x60', dir_pin: 17, invert: false, offset_voltage: 0.0, soft_disable: false, dummy_i2c: false} # Blue
 y: {address: '0x62', dir_pin: 27, invert: false, offset_voltage: 0.0, soft_disable: false, dummy_i2c: false} # Green
 z: {address: '0x63', dir_pin: 22, invert: false, offset_voltage: 0.0, soft_disable: false, dummy_i2c: false} # Yellow
+
+
+# Pins
+# 17, 27, 22, 23, 24, 25 - free GPIO
+# 18 is the PWM pin and may carry audio PWM if there is audio playing. Otherwise good.
+# The SPI pins - 7, 8, 9, 10, 11 - can be used as regular GPIO pins
+# The I2C pins - 2, 3 - have external pullup resistors to 3.3v attached
+# 14 and 15 are used for UART. You must disable the serial console to use these for regular GPIO
+# 28, 29, 30, 31 - free, but not attached to header pins

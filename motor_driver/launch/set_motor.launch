@@ -1,0 +1,7 @@
+<launch>
+
+  <node pkg="motor_driver" type="set_motor" name="set_motor" output="screen"/>
+
+  <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="rqt_reconfigure" />
+
+</launch>
