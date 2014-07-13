@@ -1,15 +1,29 @@
 import numpy as np
+from numpy.linalg import norm
+
+from chugg_physics.speed2torque import speed2torque
 
 # Wheels: {x: {axis: (x,y,z), J: 9}}
 
+# Quaternion convention: (x, y, z, w)
+
 def normalize(q):
-    return q / np.linalg.norm(q)
+    if norm(q) == 0:
+        return q
+    else:
+        return q / np.linalg.norm(q)
+
+def signed_magnitude(v):
+    mag = norm(v)
+    dot = v.dot(np.ones(len(v)))
+    sign = 1.0 if dot >= 0 else -1.0
+    return mag*sign
 
 def axisangle_to_quat(axis, angle):
     return np.hstack(( axis*np.sin(angle/2), np.cos(angle/2)))
 
 def quat_mult(p,q):
-    ''' Perform quaternion product q*p'''
+    ''' Perform quaternion product p*q'''
     return np.array([p[3]*q[0] + q[3]*p[0] + p[1]*q[2] - p[2]*q[1],
                      p[3]*q[1] + q[3]*p[1] + p[2]*q[0] - p[0]*q[2],
                      p[3]*q[2] + q[3]*p[2] + p[0]*q[1] - p[1]*q[0],
@@ -68,7 +82,6 @@ class Wheel():
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
-# Quaternion: (x, y, z, w)
 # TODO: Check whether or not we are setting wheel vel correctly.
 # I don't think we are, because under the current model the wheels don't move if we apply a torque to the cube,
 # which doesn't really make sense
@@ -83,14 +96,14 @@ class ChuggSimulator:
                        'pos': (0, 0, .122), 'ori': (0.0, np.sqrt(2.0)/2.0, 0.0, np.sqrt(2.0)/2.0), 'name': 'z'} ]
     dtype=np.float64
 
-    def __init__(self, I=None, wheels=None):
+    def __init__(self, I=None, wheels=None, motor_model=True):
         if I is None:
             I = ChuggSimulator.default_I
         if wheels is None:
             wheels = ChuggSimulator.default_wheels
 
         self.I = np.array(I)
-
+        self.motor_model = motor_model
         #####################################################
         # Set up wheel data##################################
         #####################################################
@@ -104,7 +117,9 @@ class ChuggSimulator:
             m = wheel['mass']
             name = wheel['name']
             ax = np.array(wheel['axis'])
-            J = wheel['J']
+            # Inertial matrix in frame attached to wheel, where the x axis of the
+            # frame corresponds to the axis of rotation
+            J = np.array(wheel['J'])
 
             R = quat_to_rotation_matrix(q)
             U = translation_to_inertial_matrix(t)
@@ -145,10 +160,22 @@ class ChuggSimulator:
         total_wheel_momentum = np.zeros(3)
         total_wheel_torque = np.zeros(3)
         
-        for (wheel, o, odot) in zip(self.wheels, O, Odot):
+        for (idx, (wheel, o, odot)) in enumerate(zip(self.wheels, O, Odot)):
+            # import ipdb
+            # ipdb.set_trace()
+            # Model maximum torque
+            if self.motor_model:
+                max_torque = speed2torque(abs(o))
+                local_torque = wheel.J.dot(odot*wheel.axis)
+                local_torque_mag = norm(local_torque)
+                local_torque_mag = max_torque if local_torque_mag > max_torque else local_torque_mag
+                local_acc = matrix_inverse(wheel.J).dot( normalize(local_torque)*local_torque_mag)
+                odot = signed_magnitude(local_acc)
+                Odot[idx] = odot
+            
+            # Calculate torques and momentum
             v = wheel.axis*o
             vdot = wheel.axis*odot
-            # print w.I, v
             total_wheel_momentum += wheel.I.dot(v)
             total_wheel_torque += wheel.I.dot(vdot)
 
