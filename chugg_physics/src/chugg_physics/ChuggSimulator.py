@@ -3,8 +3,6 @@ from numpy.linalg import norm
 
 from chugg_physics.speed2torque import speed2torque
 
-# Wheels: {x: {axis: (x,y,z), J: 9}}
-
 # Quaternion convention: (x, y, z, w)
 
 def normalize(q):
@@ -14,6 +12,7 @@ def normalize(q):
         return q / np.linalg.norm(q)
 
 def signed_magnitude(v):
+    '''Signed magnitude of a vector v'''
     mag = norm(v)
     dot = v.dot(np.ones(len(v)))
     sign = 1.0 if dot >= 0 else -1.0
@@ -82,9 +81,8 @@ class Wheel():
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
-# TODO: Check whether or not we are setting wheel vel correctly.
-# I don't think we are, because under the current model the wheels don't move if we apply a torque to the cube,
-# which doesn't really make sense
+# Note: This model is probably incorrect if the angular velocity vectors for the reaction wheels are not
+# eigenvectors of the wheel inertia matrices, or if any of the wheel inertia matrices change with time
 class ChuggSimulator:
     default_I = [[.57, 0, 0], [0, .57, 0], [0, 0, .57]]
     default_J = [[0.007, 0, 0], [0, 0.0035, 0], [0, 0, 0.0035]]
@@ -142,7 +140,19 @@ class ChuggSimulator:
         self.vel = np.array((0.0,0.0,0.0))
         self.wheel_vel = np.zeros(len(wheels))
         self.wheel_pos = np.zeros(len(wheels))
+
+    def maxWheelAcc(self):
+        O = self.wheel_vel
+        mwa = np.zeros(len(self.wheels), dtype=np.float64)
         
+        for (idx, (wheel, o)) in enumerate(zip(self.wheels, O)):
+            max_torque = speed2torque(abs(o))
+            max_acc = norm(matrix_inverse(wheel.J).dot(max_torque*wheel.axis))
+            mwa[idx] = max_acc
+            
+        return mwa
+            
+
     def step(self, wheel_acc, ext_torque = None, dt = 0.02):
         if len(wheel_acc) != self.n:
             raise ValueError('Wrong number of reaction wheels.')
@@ -178,8 +188,6 @@ class ChuggSimulator:
             vdot = wheel.axis*odot
             total_wheel_momentum += wheel.I.dot(v)
             total_wheel_torque += wheel.I.dot(vdot)
-
-        
 
         # Total angular momentum
         M = self.I.dot(w) + self.static_wheel_inertia.dot(w) + total_wheel_momentum

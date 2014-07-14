@@ -32,31 +32,65 @@ class ROSChuggSimulator(ChuggSimulator):
             self.thread.start()
     
     def setWheelAcc(self, acc):
+        '''Set next wheel acceleration that will be applied if a dedicated simulation thread is running'''
         if len(acc) != self.n:
             rospy.logwarn("Wrong number of reaction wheels. Ignoring...")
             return
             
         self.next_wheel_acc = acc
 
-    def setWheelTorque(self, tq):
-        print "DISABLED!"
-        assert False
-        if len(tq) != self.n:
-            rospy.logwarn("Wrong number of reaction wheels. Ignoring...")
-            return
+    # def setWheelTorque(self, tq):
+    #     print "DISABLED!"
+    #     assert False
+    #     if len(tq) != self.n:
+    #         rospy.logwarn("Wrong number of reaction wheels. Ignoring...")
+    #         return
         
         # self.next_wheel_acc = np.matrix(self.J).getI().dot(tq).A1
 
     def setExternalTorque(self, torque):
+        '''Set the next torque that will be applied if a dedicated simulation thread is running'''
         self.next_ext_torque = torque
 
     def stepWheelVelocity(self, target_wheel_vel, dt):
+        '''Calculate the acceleration that would cause the wheel velocities to hit
+        target_wheel_vel if the motors were not torque bounded, then step the physics
+        simulation with this acceleration'''
         target_wheel_vel = np.array(target_wheel_vel)
         current_vel = self.wheel_vel
         wheel_acc = target_wheel_vel - current_vel
-        ChuggSimulator.step(self, wheel_acc, ext_torque=None, dt=dt)
+        self.step( wheel_acc, ext_torque=None, dt=dt)
+
+    def spinWheelsToVel(self, vel):
+        '''Block until the wheels have spun up to the velocities specified'''
+        start = rospy.Time.now()
+        tolerance = 1.0
+        vel = np.array(vel)
+
+        def complete():
+            for (v, w) in zip(vel, self.wheel_vel):
+                if abs(v -w) > tolerance:
+                    return False
+            return True
+
+        idx = 0
+        while True:
+            if self.next_wheel_acc:
+                continue
+            
+            max_acc = self.maxWheelAcc()
+            acc = [min(m, abs(v - w))*np.sign(v - w) for (v, w, m) in zip(vel, self.wheel_vel, max_acc)]
+            self.setWheelAcc(acc)
+
+            if not (idx % 300):
+                print "Current wheel velocity: ", self.wheel_vel
+
+            if complete():
+                print "Spun up in {} seconds.".format((rospy.Time.now() - start).to_sec() )
+                break
 
     def simulatorThread(self):
+        '''Continuously step the physics simulation and publish the state'''
         while True:
             if self.last_update_time is None:
                 dt = 1.0/self.loop_rate_hz
@@ -80,14 +114,19 @@ class ROSChuggSimulator(ChuggSimulator):
                 self.next_ext_torque = None
 
             # Simulate and publish
-            ChuggSimulator.step(self, acc, ext_torque=torque, dt=dt)
+            self.step( acc, ext_torque=torque, dt=dt)
             self.publishState()
             
             if self.is_shutdown:
                 break
             self.loop_rate.sleep()
 
+    def step(self, *args, **kwargs):
+        ChuggSimulator.step(self, *args, **kwargs)
+        self.last_update_time = rospy.Time.now()
+
     def publishState(self):
+        '''Publish the orientation and wheel state.'''
         self.tb.sendTransform((0.0,0.0,0.0), self.ori, self.last_update_time, 
                                   "chugg/ori/sim", "/world")
 
@@ -100,5 +139,6 @@ class ROSChuggSimulator(ChuggSimulator):
                                   'chugg/wheels/{}'.format(wheel.name), 'chugg/ori/sim')
 
     def cleanup(self):
+        '''Shut down the dedicated simulation thread'''
         self.is_shutdown = True
         self.thread.join()

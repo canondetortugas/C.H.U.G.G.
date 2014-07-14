@@ -15,14 +15,18 @@ if __name__=='__main__':
 
     def setWheelAcc(acc):
         sim.setWheelAcc(acc)
-    def setWheelTorque(torque):
-        sim.setWheelTorque(torque)
+    # def setWheelTorque(torque):
+    #     sim.setWheelTorque(torque)
     def setExternalTorque(torque):
         sim.setExternalTorque(torque)
     def setState(*args, **kwargs):
         sim.setState(*args, **kwargs)
     def resetState():
         sim.setState()
+    def spinWheelsToVel(*args, **kwargs):
+        sim.spinWheelsToVel(*args, **kwargs)
+    def stepWheelVelocity(*args, **kwargs):
+        sim.stepWheelVelocity(*args, **kwargs)
 
     embed()
     rospy.signal_shutdown('')
