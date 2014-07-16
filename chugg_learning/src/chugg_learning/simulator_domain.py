@@ -1,5 +1,7 @@
 import numpy as np
 
+import rospy
+
 import tf.transformations as tr
 
 from chugg_learning.chugg_domain import ChuggDomainBase, quat_distance
@@ -15,14 +17,20 @@ def from_sim_convention(q):
     return np.array((q[3], q[0], q[1], q[2]))
 
 class OfflineChuggSimulatorDomain(ChuggDomainBase):
+    
+    # Extra args are passed to physics simulator
+    def __init__(self, sim_type=ChuggSimulator, **kwargs):
 
-    def __init__(self, sim_type=ChuggSimulator):
-
-        self.sim = sim_type(I=None, wheels=None, motor_model=True)
+        self.sim_args = kwargs
+        self.sim_type = sim_type
+        self.sim = None
 
         super(OfflineChuggSimulatorDomain, self).__init__()
         
     def s0(self):
+        if self.sim is None:
+            self.sim = self.sim_type(**self.sim_args)
+
         if self.random_start:
             self.state = self._randomState()
         else:
@@ -67,3 +75,13 @@ class OfflineChuggSimulatorDomain(ChuggDomainBase):
         wheel_vel = self.sim.wheel_vel
         state = np.hstack((rpy, vel, wheel_vel))
         self.state = state
+
+class OnlineChuggSimulatorDomain(OfflineChuggSimulatorDomain):
+    
+    def __init__(self):
+        super(OnlineChuggSimulatorDomain, self).__init__(sim_type=ROSChuggSimulator, spin_thread=False)
+
+    def showDomain(self, a):
+        self.sim.publishState()
+        # print "Ori: ", self.sim.ori, " vel: ", self.sim.vel, " wheel_vel: ", self.sim.wheel_vel
+        rospy.sleep(self.dt)

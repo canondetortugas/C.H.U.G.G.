@@ -3,6 +3,8 @@ from numpy.linalg import norm
 
 from chugg_physics.speed2torque import speed2torque
 
+from math import pi
+
 # Quaternion convention: (x, y, z, w)
 
 def normalize(q):
@@ -92,6 +94,8 @@ class ChuggSimulator:
                        'pos': (0, -0.122, 0), 'ori': (0.0, 0.0, np.sqrt(2.0)/2.0, np.sqrt(2.0)/2.0), 'name': 'y'},
                       {'axis': (0, 0, -1), 'J': default_J, 'mass': 0.2086525,
                        'pos': (0, 0, .122), 'ori': (0.0, np.sqrt(2.0)/2.0, 0.0, np.sqrt(2.0)/2.0), 'name': 'z'} ]
+    motor_max = 270
+    motor_min = 62*2*pi/60.0
     dtype=np.float64
 
     def __init__(self, I=None, wheels=None, motor_model=True):
@@ -214,7 +218,11 @@ class ChuggSimulator:
         self.wheel_pos %= (2*np.pi)
         
         self.wheel_vel += Odot*dt
-        
+
+        if self.motor_model:
+            for (idx, w) in enumerate(self.wheel_vel):
+                self.wheel_vel[idx] = np.sign(w)*np.clip(np.sign(w)*w, self.motor_min, self.motor_max)
+                                                         
     def setState(self, ori=(0,0,0,1), vel=(0,0,0), wheel_vel=None, wheel_pos = None):
         if wheel_vel == None:
             wheel_vel =  np.zeros(len(self.wheels))

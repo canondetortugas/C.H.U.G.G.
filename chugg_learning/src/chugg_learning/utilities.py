@@ -8,5 +8,5 @@ def get_log_dir():
     return path.join(pkg_dir, 'logs')
 
 def get_log_path():
-    
+   
     return path.join(get_log_dir(), '{domain}/{agent}/{representation}/')
