@@ -1,6 +1,6 @@
 <launch>
 
-  <arg name="frame" default="chugg/ori/sim" />
+  <arg name="frame" default="chugg/ori/final" />
 
   <group ns="chugg" >
 

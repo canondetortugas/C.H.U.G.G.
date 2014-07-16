@@ -128,7 +128,7 @@ class ROSChuggSimulator(ChuggSimulator):
     def publishState(self):
         '''Publish the orientation and wheel state.'''
         self.tb.sendTransform((0.0,0.0,0.0), self.ori, self.last_update_time, 
-                                  "chugg/ori/sim", "/world")
+                                  "chugg/ori/final", "/world")
 
         # Publish wheel transforms
         for (wheel, angle) in zip(self.wheels, self.wheel_pos):
@@ -136,7 +136,7 @@ class ROSChuggSimulator(ChuggSimulator):
             wpc = axisangle_to_quat(np.array((1.0, 0.0, 0.0)), angle)
             ori = quat_mult(wheel.axis_transform, wpc)
             self.tb.sendTransform(wheel.t, ori, self.last_update_time,
-                                  'chugg/wheels/{}'.format(wheel.name), 'chugg/ori/sim')
+                                  'chugg/wheels/{}'.format(wheel.name), 'chugg/ori/finals')
 
     def cleanup(self):
         '''Shut down the dedicated simulation thread'''
