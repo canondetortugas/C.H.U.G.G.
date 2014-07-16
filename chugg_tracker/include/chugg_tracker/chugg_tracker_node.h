@@ -81,6 +81,8 @@ private:
   tf::Transform filtered_;
 
   chugg::ChuggFilter filter_;
+  
+  bool passthrough_;
 
 public:
   ChuggTrackerNode(): BaseNode("ChuggTracker"), nh_rel_("~"), filtered_( tf::Transform::getIdentity() )
@@ -92,19 +94,27 @@ private:
   // Running spin() will cause this function to be called before the node begins looping the spinOnce() function.
   void spinFirst()
   {
+    passthrough_ = !( uscauv::param::load<bool>(nh_rel_, "enable_filter", false) );
+    base_frame_ = uscauv::param::load<std::string>(nh_rel_, "base_frame", "/camera_link");
+
     marker_sub_ = nh_rel_.subscribe<_AlvarMarkers>("markers_in", 1, &ChuggTrackerNode::markerCallback, this);
-    imu_sub_ = nh_rel_.subscribe<geometry_msgs::Vector3Stamped>("imu_in", 1, &ChuggTrackerNode::rateCallback, this );
     
     filter_rpy_pub_ = nh_rel_.advertise<geometry_msgs::Vector3>("filter/rpy", 1);
     
-    post_pub_ = nh_rel_.advertise<_Posterior>("filter/posterior", 1);
-    
-    base_frame_ = uscauv::param::load<std::string>(nh_rel_, "base_frame", "/camera_link");
+    if( !passthrough_ )
+      {
+	post_pub_ = nh_rel_.advertise<_Posterior>("filter/posterior", 1);
+	imu_sub_ = nh_rel_.subscribe<geometry_msgs::Vector3Stamped>("imu_in", 1, &ChuggTrackerNode::rateCallback, this );
+      }
+
   }
   
   // Running spin() will cause this function to get called at the loop rate until this node is killed.
   void spinOnce()
   {
+    if( passthrough_ )
+      return;
+
     /// Predict
     filter_.predict();
        
@@ -122,7 +132,7 @@ private:
     euler.z = yaw;
     filter_rpy_pub_.publish(euler);
        
-    tf::StampedTransform filtered_tf( filtered, ros::Time::now(), base_frame_, "chugg/pose/filter");
+    tf::StampedTransform filtered_tf( filtered, ros::Time::now(), base_frame_, "chugg/ori/final");
        
     br_.sendTransform(filtered_tf);
   }
@@ -151,10 +161,16 @@ private:
     
     tf::Quaternion marker_to_world_quat = marker_to_world.getRotation();
 
+    std::string tf_suffix;
+    if (passthrough_)
+      tf_suffix = "final";
+    else
+      tf_suffix = "markers";
+
     tf::StampedTransform 
-      marker_to_world_tf(marker_to_world, marker_to_world.stamp_, base_frame_, "/chugg/pose/markers"),
+      marker_to_world_tf(marker_to_world, marker_to_world.stamp_, base_frame_, std::string("/chugg/pose/") + tf_suffix ),
       marker_to_world_rot( tf::Transform(marker_to_world.getRotation()), marker_to_world.stamp_, base_frame_, 
-			   "/chugg/ori/markers");
+			   std::string("/chugg/ori/") + tf_suffix);
     output.push_back(marker_to_world_tf);
     output.push_back(marker_to_world_rot);
     
@@ -164,8 +180,10 @@ private:
     // Incorporate measurement into filter////////////////////
     //////////////////////////////////////////////////////////
     
-    filter_.updateMarkers( marker_to_world_quat );
-    
+    if( !passthrough_ )
+      {
+	filter_.updateMarkers( marker_to_world_quat );
+      }
     // filtered_ = marker_to_world_tf;
   }
 

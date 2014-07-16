@@ -1,5 +1,7 @@
 <launch>
 
+  <arg name="filter" default="true" />
+
   <!-- <remap from="chugg_finder/cloud_in" to="camera/depth_registered/points" /> -->
   <!-- <include file="$(find chugg_finder)/launch/chugg_finder.launch" /> -->
 
@@ -10,8 +12,8 @@
 	args="0 0 0 0 0 0 /chugg/ori/markers /chugg/ori/imu 100" />
 
   <!-- <include file="$(find chugg_finder)/launch/markers.launch" /> -->
-  <include file="$(find chugg_tracker)/launch/chugg_tracker.launch" />
-  
-
+  <include file="$(find chugg_tracker)/launch/chugg_tracker.launch" >
+    <arg name="filter" value="$(arg filter)" />
+  </include>
 
 </launch>

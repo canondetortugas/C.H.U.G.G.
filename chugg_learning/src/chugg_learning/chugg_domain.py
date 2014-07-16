@@ -155,8 +155,14 @@ class ChuggDomainBase(Domain):
             s = self.state
         vel = self._vel(s)
         wheel_vel = self._wheelVel(s)
-        return not all( [in_range(v, r) for (v,r) in zip(vel, self.vel_limits)] +
-                        [in_range(w, r) for (w,r) in zip(wheel_vel, self.wheel_vel_limits)] )
+        vel_exceeded = not all([in_range(v, r) for (v,r) in zip(vel, self.vel_limits)])
+        wheel_vel_exceeded = not all([in_range(w, r) for (w,r) in zip(wheel_vel, self.wheel_vel_limits)])
+        if vel_exceeded:
+            print "Velocity limit exceeded: ", vel
+        if wheel_vel_exceeded:
+            print "Wheel velocity limit exceeded: ", wheel_vel
+            
+        return vel_exceeded or wheel_vel_exceeded
 
     def _randomState(self):
         # Not an unbiased sample of rotations - this may be a problem

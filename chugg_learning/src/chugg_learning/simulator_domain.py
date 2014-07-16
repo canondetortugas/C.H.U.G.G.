@@ -77,11 +77,13 @@ class OfflineChuggSimulatorDomain(ChuggDomainBase):
         self.state = state
 
 class OnlineChuggSimulatorDomain(OfflineChuggSimulatorDomain):
-    
+
+    speedup = 10
+
     def __init__(self):
         super(OnlineChuggSimulatorDomain, self).__init__(sim_type=ROSChuggSimulator, spin_thread=False)
 
     def showDomain(self, a):
         self.sim.publishState()
         # print "Ori: ", self.sim.ori, " vel: ", self.sim.vel, " wheel_vel: ", self.sim.wheel_vel
-        rospy.sleep(self.dt)
+        rospy.sleep(self.dt/self.speedup)
