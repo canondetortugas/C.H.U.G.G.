@@ -12,10 +12,6 @@ import matplotlib.pyplot as plt
 # Our quaternion convention: (w, x, y, z)
 # Transformations.py convention: (w, x, y, z)
 # Simulator convention: (x, y, z, w)
-def to_sim_convention(q):
-    return np.array(q[1], q[2], q[3], q[0])
-def from_sim_convention(q):
-    return np.array(q[3], q[0], q[1], q[2])
 
 class StateIndex:
     ROLL = 0
@@ -48,7 +44,8 @@ def make_actions(points):
 
 def quat_distance(q1, q2):
     '''Return the angle between the two quaternions in radians, which turns out to be a distance metric over rotations'''
-    assert norm(q1) == 1.0 and norm(q2) == 1.0
+    quat_tolerance = 0.0001
+    assert abs(norm(q1)- 1.0) < quat_tolerance and abs(norm(q2) - 1.0) < quat_tolerance
     return np.arccos(abs(q1.dot(q2)))
 
 class ChuggDomainBase(Domain):
@@ -59,14 +56,14 @@ class ChuggDomainBase(Domain):
 
     euler_limits = np.array(((0, 2*pi), (-pi, pi), (0, 2*pi)))
     single_vel_limit = (-20.0, 20.0) # rad /s
-    vel_limits = np.array(single_vel_limit, single_vel_limit, single_vel_limit)
+    vel_limits = np.array((single_vel_limit, single_vel_limit, single_vel_limit))
     single_wheel_vel_limit = (-250.0, 250.0)
     wheel_vel_limits = np.array([single_wheel_vel_limit for idx in range(3)])
 
     # Actions
     action_limits = np.array((-50.0, 50.0))
     nactions_per_wheel = 5
-    actions_single_axis = np.linspace(action_limits, nactions_per_wheel)
+    actions_single_axis = np.linspace(action_limits[0], action_limits[1], nactions_per_wheel)
     actions = make_actions(actions_single_axis)
 
     episode_length_seconds = 25        # Number of steps, not a physical time
@@ -75,7 +72,7 @@ class ChuggDomainBase(Domain):
     
     discount_factor = 0.9
 
-    random_start = True
+    random_start = False
 
     # Clockwise rotation of 90 deg around x axis
     default_ori = np.array((np.sqrt(2.0)/2, np.sqrt(2.0)/2, 0.0, 0.0))
@@ -94,10 +91,10 @@ class ChuggDomainBase(Domain):
 
         # Things that need to be defined for the rlpy domain class
         self.statespace_limits = np.hstack((self.euler_limits, self.vel_limits, self.wheel_vel_limits))
-        self.continuous_dims = [StateIndex.ROLL, StateIndex.PITCH, StateIndex.YAW
+        self.continuous_dims = [StateIndex.ROLL, StateIndex.PITCH, StateIndex.YAW,
                                 StateIndex.WX, StateIndex.WY, StateIndex.WZ,
                                 StateIndex.WHEELX, StateIndex.WHEELY, StateIndex.WHEELZ]
-        self.episodeCap = episode_length
+        self.episodeCap = self.episode_length
         self.actions_num = len(self.actions)
         
         super(ChuggDomainBase, self).__init__()
@@ -107,65 +104,59 @@ class ChuggDomainBase(Domain):
         if s is None:
             s = self.state
         
-        (roll, pitch, yaw) = s[StateIndex.ROLL:StateIndex.YAW]
+        rpy = s[StateIndex.ROLL:(StateIndex.YAW+1)]
+        (roll, pitch, yaw) = (rpy[0], rpy[1], rpy[2])
         return np.array(tr.quaternion_from_euler(roll, pitch, yaw, self.euler_convention))
     def _vel(self, s = None):
         '''Return current angular velocity'''
         if s is None:
             s = self.state
-        return s[StateIndex.WX:StateIndex.WZ]
+        return s[StateIndex.WX:(StateIndex.WZ+1)]
     def _wheelVel(self, s = None):
         '''Return current wheel velocity'''
         if s is None:
             s = self.state
-        return s[StateIndex.WHEELX:StateIndex.WHEELZ]
+        return s[StateIndex.WHEELX:(StateIndex.WHEELZ+1)]
+
+    def _state(self, s = None):
+        '''Return state as a tuple (ori, vel, wheel_vel)'''
+        if s is None:
+            s = self.state
+        return (self._ori(s), self._vel(s), self._wheelVel(s))
+
+    # Abstract method for Domain class
 
     # Abstract method for Domain class
     # TODO: Update
-    def s0(self):
-        if self.random_start:
-            self.state = self._randomState()
-        else:
-            self.state = self.default_state
-
-        self.traj = [self.state]
-
-        self.current_step = 0
-        # Implicitly converted to tuple
-        # print "Step ", self.current_step, " is terminal: ", self.isTerminal(), " state ", self.state
-        return self.state.copy(), self.isTerminal(), self.possibleActions()
-
-    # Abstract method for Domain class
-    # TODO: Update
-    def step(self, action_id):
-        # TODO: Process wheel velocities so that they lie in the set: [min, -62] U [62, max]
+    # def step(self, action_id):
+    #     # TODO: Process wheel velocities so that they lie in the set: [min, -62] U [62, max]
         
-        action = self.actions[action_id]
-        # print action
+    #     action = self.actions[action_id]
+    #     # print action
         
-        state = self.state.copy()
-        state[0] += state[1]*self.dt
-        state[1] += action*self.dt
-        self.current_step += 1
-        # print self.current_step
-        # print state
+    #     state = self.state.copy()
+    #     state[0] += state[1]*self.dt
+    #     state[1] += action*self.dt
+    #     self.current_step += 1
+    #     # print self.current_step
+    #     # print state
 
-        new_state = state
-        # print new_state
-        self.state = new_state
-        self.traj.append(new_state)
-        reward = self._getReward(action)
+    #     new_state = state
+    #     # print new_state
+    #     self.state = new_state
+    #     self.traj.append(new_state)
+    #     reward = self._getReward(action)
         
-        return (reward, new_state, self.isTerminal(), self.possibleActions() )
+    #     return (reward, new_state, self.isTerminal(), self.possibleActions() )
 
-    # TOOD: Update
     def isTerminal(self, s = None):
         '''True if state lies within limits, otherwise false'''
         if s is None:
             s = self.state
-            vel = self._vel()
-            wheel_vel = self._wheelVel()
-        return not all( 
+        vel = self._vel(s)
+        wheel_vel = self._wheelVel(s)
+        return not all( [in_range(v, r) for (v,r) in zip(vel, self.vel_limits)] +
+                        [in_range(w, r) for (w,r) in zip(wheel_vel, self.wheel_vel_limits)] )
 
     def _randomState(self):
         # Not an unbiased sample of rotations - this may be a problem
@@ -179,7 +170,7 @@ class ChuggDomainBase(Domain):
             return 1.0
         else:
             ori = self._ori()
-            return -quat_dist(ori, self.goal_ori)**2
+            return -quat_distance(ori, self.goal_ori)**2
 
     def _atGoal(self):
         ori = self._ori()

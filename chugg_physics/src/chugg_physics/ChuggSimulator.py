@@ -206,6 +206,7 @@ class ChuggSimulator:
             deltaq = np.array((0,0,0,1))
             
         self.ori = quat_mult(self.ori, deltaq)
+        self.ori = normalize(self.ori)
             
         self.vel += wdot*dt
         
