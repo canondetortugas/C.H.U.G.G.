@@ -1,0 +1,60 @@
+#!/usr/bin/env python
+
+import rospy
+import tf
+import tf.transformations as tr
+import numpy as np
+
+from geometry_msgs.msg import Vector3
+from math import pi
+
+from chugg_learning.utilities import ChuggSensorSubscriber, sdoc
+
+# Signed distance from angle a to angle b on a circle
+
+class ControllerNode1D(object):
+
+    target_yaw = 0.0
+    target_vel = 0.0
+    default_wheel_vel = np.array((150.0, 150.0, 150.0))
+    k1 = 1.25
+    k2 = 1.25
+
+    def __init__(self):
+
+        self.wheel_vel = self.default_wheel_vel
+
+        self.sensors = ChuggSensorSubscriber('/chugg/ori/final', self.sensorCallback)
+        self.acc_pub = rospy.Publisher('chugg/target_acc', Vector3)
+
+    def sensorCallback(self, ori, vel, wheel_vel, last_update_time):
+        (roll, pitch, yaw) = tr.euler_from_quaternion(ori, 'sxyz')
+        wz = vel[2]
+
+        pos_err = sdoc(yaw, self.target_yaw)
+        vel_err = wz - self.target_vel
+
+        print "err: ", pos_err, vel_err
+
+        signal = -self.k1*pos_err - self.k2*vel_err
+        
+        acc = np.array((0.0, 0.0, signal)) # Negate to account for wheel placement
+
+        self.wheel_vel += acc
+        
+        msg = Vector3()
+        msg.x = acc[0]
+        msg.y = acc[1]
+        msg.z = acc[2]
+
+        self.acc_pub.publish(msg)
+
+
+if __name__=='__main__':
+
+    rospy.init_node('fake_learner')
+
+    controller = ControllerNode1D()
+
+    rospy.spin()
+
