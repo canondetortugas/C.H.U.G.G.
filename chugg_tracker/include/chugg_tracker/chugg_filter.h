@@ -376,8 +376,8 @@ namespace chugg
       /// I believe that the third parameter is the number of effective samples that we have to drop below
       /// before we resample
       filter_.reset();
-      // filter_ = std::make_shared<_Filter>( prior_.get(), 0, double(config_.samples/4.0), DEFAULT_RS);
-      filter_ = std::make_shared<_Filter>( prior_.get(), 60, 0, DEFAULT_RS);
+      filter_ = std::make_shared<_Filter>( prior_.get(), 0, double(config_.samples/4.0), DEFAULT_RS);
+      // filter_ = std::make_shared<_Filter>( prior_.get(), 60, 0, DEFAULT_RS);
       
     }
     

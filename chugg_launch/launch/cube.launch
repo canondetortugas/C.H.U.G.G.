@@ -1,0 +1,11 @@
+<launch>
+  <arg name="motors" default="false" />
+
+  <machine name="keithchugg" address="keithchugg" default="true" user="pi"
+	   password="2cool" env-loader="/home/pi/chugg_ws/devel/env.sh" 
+	   timeout="60.0"/>
+
+  <include file="$(find imu_driver)/launch/imu_driver.launch" />
+  <include if="$(arg motors)" file="$(find motor_driver)/launch/motor_driver.launch" />
+
+</launch>
