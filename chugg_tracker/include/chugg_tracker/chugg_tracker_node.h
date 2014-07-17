@@ -176,13 +176,25 @@ private:
     
     br_.sendTransform(output);
 
+    tf::StampedTransform body_to_marker_tf;
+    tf::Quaternion  body_to_marker_quat;
+
+    if( getTransform("/chugg/cm", "/chugg/marker0", body_to_marker_tf) )
+      {
+	ROS_ERROR("Can't incorporate rate measurement - failed to lookup IMU body transform");
+	return;
+      }
+    body_to_marker_quat = body_to_marker_tf.getRotation();
+
+    tf::Quaternion body_to_world_quat = marker_to_world_quat * body_to_marker_quat;
+
     //////////////////////////////////////////////////////////
     // Incorporate measurement into filter////////////////////
     //////////////////////////////////////////////////////////
     
     if( !passthrough_ )
       {
-	filter_.updateMarkers( marker_to_world_quat );
+	filter_.updateMarkers( body_to_world_quat );
       }
     // filtered_ = marker_to_world_tf;
   }
@@ -191,17 +203,19 @@ private:
   {
     tf::Vector3 rate_imu, rate_body;
     tf::StampedTransform body_to_imu_tf;
+    tf::Quaternion body_to_imu_ori;
 
-    if( getTransform("/chugg/ori/markers", "/chugg/ori/imu", body_to_imu_tf) )
+    if( getTransform("/chugg/cm", "/chugg/imu", body_to_imu_tf) )
       {
 	ROS_ERROR("Can't incorporate rate measurement - failed to lookup IMU body transform");
 	return;
       }
+    body_to_imu_ori = body_to_imu_tf.getRotation();
     
     tf::vector3MsgToTF(msg->vector, rate_imu);
 
     /// Convert angular rate into cube body coordinate system
-    rate_body = body_to_imu_tf * rate_imu;
+    rate_body = tf::quatRotate(body_to_imu_ori, rate_imu);
     
     /// Update the particle filter
     filter_.updateIMU( rate_body );    

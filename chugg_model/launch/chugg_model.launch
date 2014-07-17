@@ -1,6 +1,6 @@
 <launch>
 
-  <arg name="frame" default="chugg/ori/final" />
+  <!-- <arg name="frame" default="chugg/ori/final" /> -->
 
   <group ns="chugg" >
 
@@ -9,7 +9,13 @@
     <node pkg="robot_state_publisher" type="robot_state_publisher" name="state_publisher" />    
 
     <node name="pose_to_cm_tf" type="static_transform_publisher" pkg="tf" 
-	  args="0 0 0 0 0 0 $(arg frame) chugg/cm 100" />
+	  args="0 0 0 0 0 0 $(arg frame) /chugg/cm 100" />
+
+    <node name="cm_to_marker0_tf" type="static_transform_publisher" pkg="tf"
+	  args="0 0 0 0 -1.570796 3.141592 /chugg/cm /chugg/marker0 100" />
+
+    <node name="cm_to_imu_tf" type="static_transform_publisher" pkg="tf"
+	  args="0 0 0 -1.570796 0 3.141592 /chugg/cm /chugg/imu 100" />
 
   </group>
 
