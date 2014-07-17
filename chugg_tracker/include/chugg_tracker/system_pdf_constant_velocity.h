@@ -85,8 +85,8 @@ namespace chugg
 
       tf::Quaternion const ori = stateToQuat(state);
       /// Take current orientation and integrate velocity (deltaq), then perturb by gaussian noise
-      // tf::Quaternion const noisy = ori * deltaq * sampleQuat();
-      tf::Quaternion const noisy = ori * sampleQuat();
+      tf::Quaternion const noisy = ori * deltaq * sampleQuat();
+      // tf::Quaternion const noisy = ori * sampleQuat();
 
       state(1) = noisy.getW();
       state(2) = noisy.getX();
