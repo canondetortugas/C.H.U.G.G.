@@ -238,3 +238,7 @@ class ChuggSimulator:
         self.vel = np.array(vel, dtype=ChuggSimulator.dtype)
         self.wheel_vel = wheel_vel
         self.wheel_pos = wheel_pos
+
+    def validateState(self):
+        pass
+        

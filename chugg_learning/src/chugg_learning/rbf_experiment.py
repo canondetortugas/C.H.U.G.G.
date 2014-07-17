@@ -25,14 +25,14 @@ def make_make_experiment(DomainType):
             boyan_N0=330,
             initial_learn_rate=0.219,
             lambda_=0.5547,
-            resolution=7.0, num_rbfs=86.0,
+            resolution=7.0, num_rbfs=1000.0,
             epsilon=0.4645,
             inv_discount_factor=3.186e-5):
         opt = {}
         opt["exp_id"] = exp_id
         opt["max_steps"] = 300000
-        opt["num_policy_checks"] = 20
-        opt["checks_per_policy"] = 10
+        opt["num_policy_checks"] = 40
+        opt["checks_per_policy"] = 1
         opt["path"] = path
 
         discount_factor = 1.0 - inv_discount_factor
