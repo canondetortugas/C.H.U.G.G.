@@ -1,0 +1,8 @@
+<launch>
+  
+  <include file="$(find chugg_launch)/launch/base_sensors.launch" />
+  <include file="$(find chugg_launch)/launch/visual.launch" >  
+    <arg name="post" value="false" />
+  </include>
+
+</launch>
