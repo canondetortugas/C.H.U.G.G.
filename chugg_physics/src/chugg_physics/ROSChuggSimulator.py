@@ -7,6 +7,8 @@ import tf
 from chugg_physics.ChuggSimulator import ChuggSimulator
 from chugg_physics.ChuggSimulator import quat_mult, axisangle_to_quat
 
+from geometry_msgs.msg import Vector3Stamped
+
 class ROSChuggSimulator(ChuggSimulator):
     def __init__(self, spin_thread=True):
         I = rospy.get_param('~I', ChuggSimulator.default_I)
@@ -22,6 +24,7 @@ class ROSChuggSimulator(ChuggSimulator):
 
         # Ros resources
         self.tb = tf.TransformBroadcaster()
+        self.rate_pub = rospy.Publisher('imu_driver/angular_rate', Vector3Stamped)
         
         # Spin up thread
         self.spin_thread = spin_thread
@@ -130,13 +133,24 @@ class ROSChuggSimulator(ChuggSimulator):
         self.tb.sendTransform((0.0,0.0,0.0), self.ori, self.last_update_time, 
                                   "chugg/ori/final", "/world")
 
+        rate_msg = Vector3Stamped()
+        rate_msg.vector.x = self.vel[0]
+        rate_msg.vector.y = self.vel[1]
+        rate_msg.vector.z = self.vel[2]
+        rate_msg.header.stamp = self.last_update_time
+        rate_msg.header.frame_id = "chugg/cm"
+        
+        self.rate_pub.publish(rate_msg)
+
         # Publish wheel transforms
         for (wheel, angle) in zip(self.wheels, self.wheel_pos):
             # Rotation about the wheel's axis in a coordinate frame fixed with its x axis aligned with the wheel axis
             wpc = axisangle_to_quat(np.array((1.0, 0.0, 0.0)), angle)
             ori = quat_mult(wheel.axis_transform, wpc)
             self.tb.sendTransform(wheel.t, ori, self.last_update_time,
-                                  'chugg/wheels/{}'.format(wheel.name), 'chugg/ori/finals')
+                                  'chugg/wheels/{}'.format(wheel.name), 'chugg/ori/final')
+
+            
 
     def cleanup(self):
         '''Shut down the dedicated simulation thread'''
