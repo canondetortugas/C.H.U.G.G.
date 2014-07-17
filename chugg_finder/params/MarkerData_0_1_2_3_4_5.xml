@@ -3,48 +3,48 @@
   <!-- Looking at an example file makes me think that corners should be specified counterclockwise, starting from bottom left -->
   <!-- I'm not sure if this is a requirement or not -->
   <!-- Half-width of marker: 3.375 -->
-  <!-- Distance to face of marker: 5.0625 -->
+  <!-- Distance to face of marker: 5.5625 -->
   <!-- Front -->
   <marker index="0" status="1">
-    <corner x="5.0625" y="-3.375" z="-3.375" />
-    <corner x="5.0625" y="-3.375" z="3.375" />
-    <corner x="5.0625" y="3.375" z="3.375" />
-    <corner x="5.0625" y="3.375" z="-3.375" />
+    <corner x="5.5625" y="-3.375" z="-3.375" />
+    <corner x="5.5625" y="3.375" z="-3.375" />
+    <corner x="5.5625" y="3.375" z="3.375" />
+    <corner x="5.5625" y="-3.375" z="3.375" />
   </marker>
 
   <!-- Down -->
   <marker index="1" status="1">
-    <corner x="-3.375" y="3.375" z="-5.0625" />
-    <corner x="-3.375" y="-3.375" z="-5.0625" />
-    <corner x="3.375" y="-3.375" z="-5.0625" />
-    <corner x="3.375" y="3.375" z="-5.0625" />
+    <corner x="-3.375" y="3.375" z="-5.5625" />
+    <corner x="3.375" y="3.375" z="-5.5625" />
+    <corner x="3.375" y="-3.375" z="-5.5625" />
+    <corner x="-3.375" y="-3.375" z="-5.5625" />
   </marker>
   <!-- Left -->
   <marker index="4" status="1">
-    <corner x="-3.375" y="-5.0625" z="3.375" />
-    <corner x="3.375" y="-5.0625" z="3.375" />
-    <corner x="3.375" y="-5.0625" z="-3.375" />
-    <corner x="-3.375" y="-5.0625" z="-3.375" />
+    <corner x="-3.375" y="-5.5625" z="3.375" />
+    <corner x="-3.375" y="-5.5625" z="-3.375" />
+    <corner x="3.375" y="-5.5625" z="-3.375" />
+    <corner x="3.375" y="-5.5625" z="3.375" />    
   </marker>
   <!-- Up -->
   <marker index="3" status="1">
-    <corner x="-3.375" y="-3.375" z="5.0625" />
-    <corner x="-3.375" y="3.375" z="5.0625" />
-    <corner x="3.375" y="3.375" z="5.0625" />
-    <corner x="3.375" y="-3.375" z="5.0625" />
+    <corner x="-3.375" y="-3.375" z="5.5625" />
+    <corner x="3.375" y="-3.375" z="5.5625" />
+    <corner x="3.375" y="3.375" z="5.5625" />
+    <corner x="-3.375" y="3.375" z="5.5625" />
   </marker>
   <!-- Back -->
   <marker index="2" status="1">
-    <corner x="-5.0625" y="3.375" z="3.375" />
-    <corner x="-5.0625" y="-3.375" z="3.375" />
-    <corner x="-5.0625" y="-3.375" z="-3.375" />
-    <corner x="-5.0625" y="3.375" z="-3.375" />
+    <corner x="-5.5625" y="3.375" z="3.375" />
+    <corner x="-5.5625" y="3.375" z="-3.375" />
+    <corner x="-5.5625" y="-3.375" z="-3.375" />
+    <corner x="-5.5625" y="-3.375" z="3.375" />
   </marker>
   <!-- Right -->
   <marker index="5" status="1">
-    <corner x="3.375" y="5.0625" z="3.375" />
-    <corner x="-3.375" y="5.0625" z="3.375" />
-    <corner x="-3.375" y="5.0625" z="-3.375" />
-    <corner x="3.375" y="5.0625" z="-3.375" />
+    <corner x="3.375" y="5.5625" z="3.375" />
+    <corner x="3.375" y="5.5625" z="-3.375" />
+    <corner x="-3.375" y="5.5625" z="-3.375" />
+    <corner x="-3.375" y="5.5625" z="3.375" />
   </marker>
 </multimarker>
