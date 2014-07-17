@@ -1,9 +1,9 @@
 <launch>
 
-  <arg name="sim" default="true" />
-  <arg name="cube" default="false" />
-  <arg name="motors" default="false" />
-  <arg name="filter" default="false" />
+  <arg name="sim" default="false" />
+  <arg name="cube" default="true" />
+  <arg name="motors" default="true" />
+  <arg name="filter" default="true" />
 
   <include file="$(find chugg_model)/launch/chugg_model.launch" >
     <arg name="frame" value="/chugg/ori/final" />

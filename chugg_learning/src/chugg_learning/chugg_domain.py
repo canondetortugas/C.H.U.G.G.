@@ -9,6 +9,7 @@ from rlpy.Domains.Domain import Domain
 
 import matplotlib.pyplot as plt
 
+# TOOD: Wrong, transformations uses (x, y, z, w), switch to this 
 # Our quaternion convention: (w, x, y, z)
 # Transformations.py convention: (w, x, y, z)
 # Simulator convention: (x, y, z, w)

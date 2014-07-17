@@ -127,6 +127,8 @@ include_directories(
 ## in contrast to setup.py, you can choose the destination
 install(PROGRAMS
   scripts/offline_simulator_learner
+  scripts/online_simulator_learner
+  scripts/learner_in_quotes
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

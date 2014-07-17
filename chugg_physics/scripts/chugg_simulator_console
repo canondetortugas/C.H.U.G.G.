@@ -3,8 +3,9 @@
 import rospy
 import numpy as np
 
-from IPython import embed
+from geometry_msgs.msg import Vector3
 
+from IPython import embed
 from chugg_physics.ROSChuggSimulator import ROSChuggSimulator
 
 
@@ -12,6 +13,11 @@ if __name__=='__main__':
     rospy.init_node('chugg_simulator')
 
     sim = ROSChuggSimulator()
+
+    def wheelAccCallback(msg):
+        sim.setWheelAcc(np.array((msg.x, msg.y, msg.z)))
+
+    acc_sub = rospy.Subscriber('chugg/target_acc', Vector3, wheelAccCallback)
 
     def setWheelAcc(acc):
         sim.setWheelAcc(acc)
