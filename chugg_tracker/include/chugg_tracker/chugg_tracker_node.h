@@ -176,12 +176,15 @@ private:
     
     br_.sendTransform(output);
 
+    if( passthrough_ )
+      return;
+
     tf::StampedTransform body_to_marker_tf;
     tf::Quaternion  body_to_marker_quat;
 
     if( getTransform("/chugg/cm", "/chugg/marker0", body_to_marker_tf) )
       {
-	ROS_ERROR("Can't incorporate rate measurement - failed to lookup IMU body transform");
+	ROS_ERROR("Can't incorporate marker measurement - failed to lookup marker body transform");
 	return;
       }
     body_to_marker_quat = body_to_marker_tf.getRotation();
@@ -192,10 +195,9 @@ private:
     // Incorporate measurement into filter////////////////////
     //////////////////////////////////////////////////////////
     
-    if( !passthrough_ )
-      {
-	filter_.updateMarkers( body_to_world_quat );
-      }
+
+    filter_.updateMarkers( body_to_world_quat );
+
     // filtered_ = marker_to_world_tf;
   }
 
