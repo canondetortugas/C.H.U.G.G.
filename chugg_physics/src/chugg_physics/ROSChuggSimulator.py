@@ -10,10 +10,10 @@ from chugg_physics.ChuggSimulator import quat_mult, axisangle_to_quat
 from geometry_msgs.msg import Vector3Stamped
 
 class ROSChuggSimulator(ChuggSimulator):
-    def __init__(self, spin_thread=True):
+    def __init__(self, spin_thread=True, **kwargs):
         I = rospy.get_param('~I', ChuggSimulator.default_I)
         wheels = rospy.get_param('~wheels', ChuggSimulator.default_wheels)
-        ChuggSimulator.__init__(self, I=I, wheels=wheels)
+        ChuggSimulator.__init__(self, I=I, wheels=wheels, **kwargs)
         
         self.loop_rate_hz = float(rospy.get_param('~loop_rate', 60))
         self.loop_rate = rospy.Rate(self.loop_rate_hz)

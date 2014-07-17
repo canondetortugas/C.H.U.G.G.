@@ -25,7 +25,7 @@ def make_make_experiment(DomainType):
             boyan_N0=330,
             initial_learn_rate=0.219,
             lambda_=0.5547,
-            resolution=7.0, num_rbfs=1000.0,
+            resolution=7.0, num_rbfs=84.0,
             epsilon=0.4645,
             inv_discount_factor=3.186e-5):
         opt = {}

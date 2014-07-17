@@ -23,7 +23,7 @@ class OfflineChuggSimulator1DDomain(ChuggDomain1DBase):
         
     def s0(self):
         if self.sim is None:
-            self.sim = self.sim_type(**self.sim_args)
+            self.sim = self.sim_type(motor_model=False, **self.sim_args)
 
         if self.random_start:
             self.state = self._randomState()
@@ -53,6 +53,7 @@ class OfflineChuggSimulator1DDomain(ChuggDomain1DBase):
 
         # print self.sim.ori, self.sim.vel, self.sim.wheel_vel
         # Step the physics simulator
+        self.current_step +=1
         self.sim.step(acc, dt=self.dt)
         self._updateStateFromSimulator()
 
@@ -82,3 +83,4 @@ class OnlineChuggSimulator1DDomain(OfflineChuggSimulator1DDomain):
         self.sim.publishState()
         # print "Ori: ", self.sim.ori, " vel: ", self.sim.vel, " wheel_vel: ", self.sim.wheel_vel
         rospy.sleep(self.dt/self.speedup)
+        super(OnlineChuggSimulator1DDomain, self).showDomain(a)

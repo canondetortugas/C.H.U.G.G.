@@ -14,6 +14,7 @@ Panels:
         - /Image1
         - /Image2
         - /RobotModel1
+        - /Axes1
       Splitter Ratio: 0.5
     Tree Height: 866
   - Class: rviz/Selection
@@ -34,7 +35,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: Image
+    SyncSource: ""
 Visualization Manager:
   Class: ""
   Displays:
@@ -61,15 +62,13 @@ Visualization Manager:
       Frame Timeout: 1
       Frames:
         All Enabled: false
-        camera_depth_frame:
+        chugg/ori/final:
           Value: true
-        camera_depth_optical_frame:
-          Value: true
-        camera_link:
-          Value: true
-        camera_rgb_frame:
-          Value: true
-        camera_rgb_optical_frame:
+        chugg/wheels/x:
+          Value: false
+        chugg/wheels/y:
+          Value: false
+        chugg/wheels/z:
           Value: true
         world:
           Value: true
@@ -80,13 +79,13 @@ Visualization Manager:
       Show Names: false
       Tree:
         world:
-          camera_link:
-            camera_depth_frame:
-              camera_depth_optical_frame:
-                {}
-            camera_rgb_frame:
-              camera_rgb_optical_frame:
-                {}
+          chugg/ori/final:
+            chugg/wheels/x:
+              {}
+            chugg/wheels/y:
+              {}
+            chugg/wheels/z:
+              {}
       Update Interval: 0
       Value: true
     - Class: rviz/Marker
@@ -193,6 +192,13 @@ Visualization Manager:
       Update Interval: 0
       Value: true
       Visual Enabled: true
+    - Class: rviz/Axes
+      Enabled: true
+      Length: 0.1
+      Name: Axes
+      Radius: 0.01
+      Reference Frame: <Fixed Frame>
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -217,7 +223,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 4.60574
+      Distance: 2.34834
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
@@ -229,10 +235,10 @@ Visualization Manager:
         Z: 0
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.485398
+      Pitch: 0.845398
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 2.6754
+      Yaw: 3.2604
     Saved: ~
 Window Geometry:
   Displays:

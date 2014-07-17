@@ -51,16 +51,15 @@ class ChuggDomain1DBase(Domain):
     # s - fixed frame, r - body frame
     # Ex: xyz - Rotation about x, followed by rotation about y, followed by rotation about z
     euler_convention = 'sxyz'
-
-    euler_limit = (0, 2*pi)
-    vel_limit = (-20.0, 20.0) # rad /s
+    euler_limit = (-pi, pi)
+    vel_limit = (-10.0, 10.0) # rad /s
     wheel_vel_limit = (-250.0, 250.0)
 
     # Actions
     action_limits = np.array((-50.0, 50.0))
-    nactions_per_wheel = 5
-    actions_single_axis = np.linspace(action_limits[0], action_limits[1], nactions_per_wheel)
-    actions = actions_single_axis
+    # nactions_per_wheel = 5
+    # actions_single_axis = np.linspace(action_limits[0], action_limits[1], nactions_per_wheel)
+    actions = action_limits
 
     episode_length_seconds = 25        # Number of steps, not a physical time
     dt = 0.01
@@ -84,6 +83,7 @@ class ChuggDomain1DBase(Domain):
 
     visualization_bins = 20
     visualization_labels = 5
+    draw_step = 100
 
     def __init__(self):
 
@@ -137,7 +137,7 @@ class ChuggDomain1DBase(Domain):
         return vel_exceeded
 
     def _randomState(self):
-        passx
+        pass
         # Not an unbiased sample of rotations - this may be a problem
         # return np.array([to_range(self.random_state.rand(), limit) for limit in self.statespace_limits])
     
@@ -148,11 +148,25 @@ class ChuggDomain1DBase(Domain):
             return 1.0
         else:
             ori = self._ori()
-            return -abs( sdoc(self._ori(), self.goal_yaw) )**2
+            return -abs( sdoc(self._ori(), self.goal_yaw) )**2 - 10*self._vel()**2
 
     def _atGoal(self):
         ori = self._ori()
         return abs( sdoc(self._ori(), self.goal_yaw) ) < self.goal_tolerance
 
     def showDomain(self, a):
-        pass
+        if self.current_step % self.draw_step:
+            return
+
+        traj = np.array(self.traj)
+
+        # print traj[-1,0]
+
+        plt.figure(1)
+        plt.clf()
+        
+        plt.scatter(traj[:,0], traj[:,1], c=range(len(traj)))
+        plt.xlim(self.euler_limit[0], self.euler_limit[1])
+        plt.ylim(self.vel_limit[0], self.vel_limit[1])
+        plt.title('Trajectory')
+        plt.draw()
