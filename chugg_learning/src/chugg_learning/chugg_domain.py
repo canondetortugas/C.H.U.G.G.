@@ -53,7 +53,7 @@ class ChuggDomainBase(Domain):
 
     # s - fixed frame, r - body frame
     # Ex: xyz - Rotation about x, followed by rotation about y, followed by rotation about z
-    euler_convention = 'sxyz'
+    euler_convention = 'rxyz'
 
     euler_limits = np.array(((0, 2*pi), (-pi, pi), (0, 2*pi)))
     single_vel_limit = (-20.0, 20.0) # rad /s
@@ -76,13 +76,13 @@ class ChuggDomainBase(Domain):
     random_start = False
 
     # Clockwise rotation of 90 deg around x axis
-    default_ori = np.array((np.sqrt(2.0)/2, np.sqrt(2.0)/2, 0.0, 0.0))
+    default_ori = np.array((np.sqrt(2.0)/2, 0.0, 0.0, np.sqrt(2.0)/2))
     default_vel = np.array((0.0, 0.0, 0.0))
-    default_wheel_vel = np.array((0.0, 0.0, 0.0))
+    default_wheel_vel = np.array((20.0, 20.0, 20.0))
     default_state = np.hstack((default_ori, default_vel, default_wheel_vel))
 
     # Identity rotation
-    goal_ori = np.array((1.0, 0.0, 0.0, 0.0))
+    goal_ori = np.array((0.0, 0.0, 0.0, 1.0))
     goal_tolerance = pi/6        # Angle between current rotation and target in radians
 
     visualization_bins = 20
@@ -157,13 +157,13 @@ class ChuggDomainBase(Domain):
         vel = self._vel(s)
         wheel_vel = self._wheelVel(s)
         vel_exceeded = not all([in_range(v, r) for (v,r) in zip(vel, self.vel_limits)])
-        wheel_vel_exceeded = not all([in_range(w, r) for (w,r) in zip(wheel_vel, self.wheel_vel_limits)])
+        # wheel_vel_exceeded = not all([in_range(w, r) for (w,r) in zip(wheel_vel, self.wheel_vel_limits)])
         if vel_exceeded:
             print "Velocity limit exceeded: ", vel
-        if wheel_vel_exceeded:
-            print "Wheel velocity limit exceeded: ", wheel_vel
+        # if wheel_vel_exceeded:
+        #     print "Wheel velocity limit exceeded: ", wheel_vel
             
-        return vel_exceeded or wheel_vel_exceeded
+        return vel_exceeded
 
     def _randomState(self):
         # Not an unbiased sample of rotations - this may be a problem

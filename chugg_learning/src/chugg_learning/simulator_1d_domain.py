@@ -4,28 +4,22 @@ import rospy
 
 import tf.transformations as tr
 
-from chugg_learning.chugg_domain import ChuggDomainBase, quat_distance
-from chugg_physics.ChuggSimulator import ChuggSimulator
+from chugg_learning.chugg_1d_domain import ChuggDomain1DBase, quat_distance
+from chugg_physics.ChuggSimulator import ChuggSimulator, axisangle_to_quat
 from chugg_physics.ROSChuggSimulator import ROSChuggSimulator
 
 # Our quaternion convention: (w, x, y, z)
 # Transformations.py convention: (w, x, y, z)
 # Simulator convention: (x, y, z, w)
-# def to_sim_convention(q):
-#     return np.array((q[1], q[2], q[3], q[0]))
-# def from_sim_convention(q):
-#     return np.array((q[3], q[0], q[1], q[2]))
 
-class OfflineChuggSimulatorDomain(ChuggDomainBase):
+class OfflineChuggSimulator1DDomain(ChuggDomain1DBase):
     
     # Extra args are passed to physics simulator
     def __init__(self, sim_type=ChuggSimulator, **kwargs):
-
         self.sim_args = kwargs
         self.sim_type = sim_type
         self.sim = None
-
-        super(OfflineChuggSimulatorDomain, self).__init__()
+        super(OfflineChuggSimulator1DDomain, self).__init__()
         
     def s0(self):
         if self.sim is None:
@@ -42,18 +36,20 @@ class OfflineChuggSimulatorDomain(ChuggDomainBase):
         self.current_step = 0
 
         # Set the physics simulator state
-        (ori, vel, wheel_vel) = self._state()
+        (yaw, vel, wheel_vel) = self._state()
         # ori = to_sim_convention(ori)
         
-        self.sim.setState(ori=ori, vel=vel, wheel_vel=wheel_vel)
-
+        self.sim.setState(ori=axisangle_to_quat(np.array((0.0, 0.0, 1.0)), yaw), 
+                          vel=np.array((0.0, 0.0, vel)), 
+                          wheel_vel=np.array((0.0, 0.0, wheel_vel)))
+                          
         # Implicitly converted to tuple
         return self.state.copy(), self.isTerminal(), self.possibleActions()
 
 
     def step(self, action_idx):
         action = self.actions[action_idx]
-        acc = action
+        acc = np.array((0.0, 0.0, action))
 
         # print self.sim.ori, self.sim.vel, self.sim.wheel_vel
         # Step the physics simulator
@@ -70,18 +66,17 @@ class OfflineChuggSimulatorDomain(ChuggDomainBase):
     def _updateStateFromSimulator(self):
         ori = self.sim.ori
         (roll, pitch, yaw) = tr.euler_from_quaternion(ori, self.euler_convention)
-        rpy = np.array((roll, pitch, yaw))
-        vel = self.sim.vel
-        wheel_vel = self.sim.wheel_vel
-        state = np.hstack((rpy, vel, wheel_vel))
+        vel = self.sim.vel[2]
+        wheel_vel = self.sim.wheel_vel[2]
+        state = np.array((yaw, vel, wheel_vel))
         self.state = state
 
-class OnlineChuggSimulatorDomain(OfflineChuggSimulatorDomain):
+class OnlineChuggSimulator1DDomain(OfflineChuggSimulator1DDomain):
 
     speedup = 10
 
     def __init__(self):
-        super(OnlineChuggSimulatorDomain, self).__init__(sim_type=ROSChuggSimulator, spin_thread=False)
+        super(OnlineChuggSimulator1DDomain, self).__init__(sim_type=ROSChuggSimulator, spin_thread=False)
 
     def showDomain(self, a):
         self.sim.publishState()

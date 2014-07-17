@@ -1,6 +1,6 @@
 <launch>
 
-  <node type="online_simulator_learner" pkg="chugg_learning" name="simulator_learner" output="screen"/>
+  <node type="online_simulator_1d_learner" pkg="chugg_learning" name="simulator_learner" output="screen"/>
 
   <include file="$(find chugg_launch)/launch/visual.launch" >
     <arg name="post" value="false" />
