@@ -3,7 +3,7 @@
   <arg name="sim" default="false" />
   <arg name="cube" default="true" />
   <arg name="motors" default="true" />
-  <arg name="filter" default="true" />
+  <arg name="filter" default="false" />
 
   <include file="$(find chugg_model)/launch/chugg_model.launch" >
     <arg name="frame" value="/chugg/ori/final" />
@@ -19,6 +19,8 @@
 
   <!-- Run with real hardware -->
   <group unless="$(arg sim)" >
+    <include file="$(find motor_driver)/launch/set_motor.launch" />
+
     <include file="$(find chugg_launch)/launch/base_sensors.launch"/>
     <include file="$(find chugg_finder)/launch/markers.launch" />
     
