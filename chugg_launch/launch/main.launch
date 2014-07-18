@@ -19,7 +19,9 @@
 
   <!-- Run with real hardware -->
   <group unless="$(arg sim)" >
-    <include file="$(find motor_driver)/launch/set_motor.launch" />
+    <group unless="$(arg cube)" >
+      <remap from="imu_driver/angular_rate" to="chugg_tracker/filter/velocity" />
+    </group>
 
     <include file="$(find chugg_launch)/launch/base_sensors.launch"/>
     <include file="$(find chugg_finder)/launch/markers.launch" />
@@ -29,11 +31,13 @@
     </include>
     
     <include file="$(find chugg_launch)/launch/visual.launch">
-      <arg name="post" value="true" />
+      <arg name="post" value="$(arg filter)" />
     </include>
 
     <!-- Launch nodes on CHUGG - this must be the last include in the file-->
     <group if="$(arg cube)" >
+      <include file="$(find motor_driver)/launch/set_motor.launch" />
+      
       <include file="$(find chugg_launch)/launch/cube.launch" >
 	<arg name="motors" value="$(arg motors)" />
       </include>

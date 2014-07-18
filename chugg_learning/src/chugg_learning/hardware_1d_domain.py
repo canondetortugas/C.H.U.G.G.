@@ -6,8 +6,8 @@ import rospy
 
 import tf.transformations as tr
 
-from geometry_msgs import Vector3
-from std_srvs import Empty
+from geometry_msgs.msg import Vector3
+from std_srvs.srv import Empty
 
 from chugg_learning.chugg_1d_domain import ChuggDomain1DBase, quat_distance
 from chugg_physics.ChuggSimulator import ChuggSimulator
@@ -25,32 +25,42 @@ class ChuggHardware1DDomain(ChuggDomain1DBase):
 
         self.random_start = None
         self.interrupt = False
+        self.wheel_vel = 0.0
 
-        self.sensors = self.sensors = ChuggSensorSubscriber('/chugg/ori/final', self.sensorCallback)
-        self.vel_pub = rospy.Publisher('motor_driver/target_vel', Vector3)
-        self.start_service = rospy.Service('start_learning', Empty, self.startEpisodeCallback)
-        self.stop_service = rospy.Service('stop_learning', Empty, self.stopEpisodeCallback)
-        
+        print "Setting threading ready false"
         self.threading_ready = False
 
         super(ChuggHardware1DDomain, self).__init__()
 
     def startThreading(self):
-        if self.threading_ready:
+        print "Threading ready: ", self.threading_ready
+        if self.threading_ready is True:
             return
-        
+
+        print "Setting threading ready true"
+        self.threading_ready = True
+
+        self.sensors = self.sensors = ChuggSensorSubscriber('/chugg/ori/final', self.sensorCallback)
+        self.vel_pub = rospy.Publisher('motor_driver/target_vel', Vector3)
+        self.start_service = rospy.Service('start_learning', Empty, self.startEpisodeCallback)
+        self.stop_service = rospy.Service('stop_learning', Empty, self.stopEpisodeCallback)
+
         self.start_cv = threading.Condition()
         self.sensor_cv = threading.Condition()
 
         self.waiting_for_sensor = False
 
     def sensorCallback(self, ori, vel, wheel_vel, last_update_time):
+        # print "Sensors: ", ori, vel
         if not self.waiting_for_sensor:
             return
 
         (roll, pitch, yaw) = tr.euler_from_quaternion(ori, self.euler_convention)
         vz = vel[2]
-        wheelz = wheel_vel[2]
+        # wheelz = wheel_vel[2]
+        wheelz = self.wheel_vel
+
+        # print yaw, vz, wheelz
         self.state = np.array((yaw, vz, wheelz))
         
         with self.sensor_cv:
@@ -66,7 +76,9 @@ class ChuggHardware1DDomain(ChuggDomain1DBase):
         # Wait for the user to press a key
         self._initializePlatform()
         self._waitForEpisodeStart()
+        rospy.loginfo('Waiting for first sensor measurement.')
         self._waitForStateUpdate()
+        rospy.loginfo('Got sensor measurement. Proceeding...')
 
         state = self.state.copy()
         
@@ -109,7 +121,7 @@ class ChuggHardware1DDomain(ChuggDomain1DBase):
         
     def isTerminal(self):
         term = super(ChuggHardware1DDomain, self).isTerminal()
-        interrupt = _userInterrupted()
+        interrupt = self._userInterrupted()
         return term or interrupt
 
     def _setAcc(self, acc):
@@ -117,8 +129,8 @@ class ChuggHardware1DDomain(ChuggDomain1DBase):
         default = self.default_wheel_vel
 
         msg = Vector3()
-        msg.x = default
-        msg.y = default
+        msg.x = default[0]
+        msg.y = default[1]
         msg.z = new_wheel_vel
         self.wheel_vel = new_wheel_vel
         
@@ -140,9 +152,9 @@ class ChuggHardware1DDomain(ChuggDomain1DBase):
     # Initialize hardware platform state
     def _initializePlatform(self):
         wv = self.default_wheel_vel
-        self.wheel_vel = wv
+        self.wheel_vel = wv[2]
         msg = Vector3()
-        msg.x = wv
-        msg.y = wv
-        msg.z = wv
+        msg.x = wv[0]
+        msg.y = wv[1]
+        msg.z = wv[2]
         self.vel_pub.publish(msg)

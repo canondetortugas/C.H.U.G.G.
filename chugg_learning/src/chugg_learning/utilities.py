@@ -75,3 +75,4 @@ class ChuggSensorSubscriber(object):
             self.callback(self.ori, self.vel, self.wheel_vel, self.last_update_time)
         except Exception as e:
             rospy.logerr('External callback failed [ {} ].'.format(e))
+            raise e

@@ -9,7 +9,7 @@ from hyperopt import hp
 from os import path
 
 param_space = {
-    "num_rbfs": hp.qloguniform("num_rbfs", np.log(1e1), np.log(1e4), 1),
+    "num_rbfs": hp.qloguniform("num_rbfs", np.log(1e1), np.log(1e3), 1),
     'resolution': hp.quniform("resolution", 3, 30, 1),
     'boyan_N0': hp.loguniform("boyan_N0", np.log(1e1), np.log(1e5)),
    'lambda_': hp.uniform("lambda_", 0., 1.),
@@ -22,10 +22,10 @@ def make_make_experiment(DomainType):
     def make_experiment(
         # Path needs to have this format or hypersearch breaks
             exp_id=1, path=get_log_path(),
-            boyan_N0=330,
+            boyan_N0=330.65,
             initial_learn_rate=0.219,
             lambda_=0.5547,
-            resolution=7.0, num_rbfs=84.0,
+            resolution=7.0, num_rbfs=86.0,
             epsilon=0.4645,
             inv_discount_factor=3.186e-5):
         opt = {}
