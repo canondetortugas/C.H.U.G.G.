@@ -71,7 +71,7 @@ class ChuggTrackerNode: public BaseNode
 {
 private:
   ros::NodeHandle nh_rel_;
-  ros::Publisher filter_rpy_pub_, post_pub_;
+  ros::Publisher filter_rpy_pub_, post_pub_, vel_pub_;
   ros::Subscriber marker_sub_, imu_sub_;
   tf::TransformBroadcaster br_;
   tf::TransformListener lr_;
@@ -100,6 +100,7 @@ private:
     marker_sub_ = nh_rel_.subscribe<_AlvarMarkers>("markers_in", 1, &ChuggTrackerNode::markerCallback, this);
     
     filter_rpy_pub_ = nh_rel_.advertise<geometry_msgs::Vector3>("filter/rpy", 1);
+    vel_pub_ = nh_rel_.advertise<geometry_msgs::Vector3Stamped>("filter/velocity", 1);
     
     if( !passthrough_ )
       {
@@ -117,11 +118,25 @@ private:
 
     /// Predict
     filter_.predict();
-       
+
+    ros::Time now = ros::Time::now();
+
     std::shared_ptr<_Posterior> post = filter_.getPosterior();
     post_pub_.publish(*post);
 
-    tf::Transform filtered = tf::Transform(filter_.getEstimator());
+    // tf::Transform filtered = tf::Transform(filter_.getEstimator());
+    std::pair<tf::Quaternion, tf::Vector3> estimators = filter_.getEstimator();
+    tf::Transform filtered = tf::Transform( estimators.first);
+    tf::Vector3 const & vel_filtered = estimators.second;
+
+    /// publish filtered velocity
+    geometry_msgs::Vector3Stamped vel_msg;
+    vel_msg.vector.x = vel_filtered.getX();
+    vel_msg.vector.y = vel_filtered.getY();
+    vel_msg.vector.z = vel_filtered.getZ();
+    vel_msg.header.frame_id = "/chugg/cm";
+    vel_msg.header.stamp = now;
+    vel_pub_.publish(vel_msg);
 
     /// convert filtered orientation to RPY and publish
     double roll, pitch, yaw;
@@ -132,7 +147,7 @@ private:
     euler.z = yaw;
     filter_rpy_pub_.publish(euler);
        
-    tf::StampedTransform filtered_tf( filtered, ros::Time::now(), base_frame_, "chugg/ori/final");
+    tf::StampedTransform filtered_tf( filtered, now, base_frame_, "chugg/ori/final");
        
     br_.sendTransform(filtered_tf);
   }

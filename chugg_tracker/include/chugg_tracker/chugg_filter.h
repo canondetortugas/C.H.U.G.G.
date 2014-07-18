@@ -122,7 +122,10 @@ namespace chugg
       ColumnVector input(1);
       input(1) = dt;
       if( !filter_->Update( system_.get(), input) )
-	ROS_WARN("System update failed.");
+	{
+	  ROS_WARN("System update failed.");
+	  initializeFilter();
+	}
     }
 
     /// Incorporate measurement from ar marker tracker
@@ -146,7 +149,10 @@ namespace chugg
       input(1) = predict_dt;
 
       if( !filter_->Update( system_.get(), input, marker_measurement_.get(), measurement) )
-	ROS_WARN("Marker measurement update failed.");
+	{
+	  ROS_WARN("Marker measurement update failed.");
+	  initializeFilter();
+	}
     }
 
     void updateIMU(tf::Vector3 const & rate)
@@ -199,9 +205,11 @@ namespace chugg
       return output;
     }
     
-    tf::Quaternion getEstimator()
+    std::pair<tf::Quaternion, tf::Vector3> getEstimator()
     {
       typedef std::vector< BFL::WeightedSample<ColumnVector> > _SampleVec;
+
+      tf::Vector3 vel(0.0, 0.0, 0.0);
 
       BFL::MCPdf<ColumnVector> * posterior = filter_->PostGet();
       
@@ -214,10 +222,12 @@ namespace chugg
 	  ColumnVector const & sample = sample_it->ValueGet();
 
 	  sample_quats.push_back( tf::Quaternion(sample(2), sample(3), sample(4), sample(1)) );
-
+	  vel += tf::Vector3( sample(5), sample(6), sample(7) );
 	}
 
-      return chugg::quaternionAverage(sample_quats);
+      vel /= samples.size();
+
+      return std::make_pair( chugg::quaternionAverage(sample_quats), vel );
     }
 
   private:
