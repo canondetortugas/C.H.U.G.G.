@@ -4,7 +4,7 @@
   <arg name="pkg" value="chugg_tracker" />
   <arg name="name" value="chugg_tracker" />
   <arg name="type" default="$(arg name)" />
-  <arg name="rate" default="60" />
+  <arg name="rate" default="100" />
   <arg name="args" value="_loop_rate:=$(arg rate)
 			  _enable_filter:=$(arg filter)" />
 

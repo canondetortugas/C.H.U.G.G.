@@ -145,7 +145,7 @@ class ChuggDomain1DBase(Domain):
         if self.isTerminal():
             return -10.0*(self.episode_length - self.current_step)
         elif self._atGoal():
-            return 1.0
+            return 10.0
         else:
             ori = self._ori()
             return -abs( sdoc(self._ori(), self.goal_yaw) )**2 - 10*self._vel()**2

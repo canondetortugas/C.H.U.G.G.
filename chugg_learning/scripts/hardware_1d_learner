@@ -1,0 +1,22 @@
+#!/usr/bin/env python
+
+import rospy
+
+import chugg_learning.rbf_experiment as rbf_exp
+from chugg_learning.simulator_1d_domain import ChuggHardware1DDomain
+
+param_space = rbf_exp.param_space
+make_experiment = rbf_exp.make_make_experiment(ChuggHardware1DDomain)
+
+if __name__ == '__main__':
+
+   rospy.init_node('hardware_1d_learner')
+
+   experiment = make_experiment(1)
+   experiment.run(visualize_performance=1)
+   experiment.plot()
+
+
+
+
+
