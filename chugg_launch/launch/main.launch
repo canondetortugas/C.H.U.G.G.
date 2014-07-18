@@ -3,7 +3,8 @@
   <arg name="sim" default="false" />
   <arg name="cube" default="true" />
   <arg name="motors" default="true" />
-  <arg name="filter" default="false" />
+  <arg name="filter" default="true" />
+  <arg name="learn" default="true" />
 
   <include file="$(find chugg_model)/launch/chugg_model.launch" >
     <arg name="frame" value="/chugg/ori/final" />
@@ -19,8 +20,13 @@
 
   <!-- Run with real hardware -->
   <group unless="$(arg sim)" >
-    <group unless="$(arg cube)" >
-      <remap from="imu_driver/angular_rate" to="chugg_tracker/filter/velocity" />
+
+    <group if="$(arg learn)" >
+    <node if="$(arg learn)" pkg="chugg_learning" type="hardware_1d_learner"
+	  name="learner" launch-prefix="xterm -e ipython" />
+
+    <node pkg="rqt_plot" type="rqt_plot" name="vel_plot" 
+	  args="/motor_driver/target_vel/x:y:z" />
     </group>
 
     <include file="$(find chugg_launch)/launch/base_sensors.launch"/>

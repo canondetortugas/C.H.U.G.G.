@@ -27,12 +27,13 @@ def make_make_experiment(DomainType):
             lambda_=0.5547,
             resolution=7.0, num_rbfs=86.0,
             epsilon=0.4645,
-            inv_discount_factor=3.186e-5):
+            inv_discount_factor=3.186e-5,
+            checks_per_policy=1):
         opt = {}
         opt["exp_id"] = exp_id
         opt["max_steps"] = 300000
         opt["num_policy_checks"] = 40
-        opt["checks_per_policy"] = 1
+        opt["checks_per_policy"] = checks_per_policy
         opt["path"] = path
 
         discount_factor = 1.0 - inv_discount_factor

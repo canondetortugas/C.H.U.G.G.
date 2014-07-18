@@ -15,6 +15,8 @@ from chugg_physics.ROSChuggSimulator import ROSChuggSimulator
 
 from chugg_learning.utilities import ChuggSensorSubscriber
 
+from copy import deepcopy
+
 # Quaternion convention: (x, y, z, w)
 class ChuggHardware1DDomain(ChuggDomain1DBase):
 
@@ -28,32 +30,38 @@ class ChuggHardware1DDomain(ChuggDomain1DBase):
         self.wheel_vel = 0.0
 
         print "Setting threading ready false"
-        self.threading_ready = False
+        # self.threading_ready = False
+        # self.startThreading()
+
+        self.state = np.array((0.0, 0.0, 0.0))
+        self.loop_rate = rospy.Rate(1.0/self.dt)
+
+        self.sensors = None
 
         super(ChuggHardware1DDomain, self).__init__()
 
     def startThreading(self):
-        print "Threading ready: ", self.threading_ready
-        if self.threading_ready is True:
-            return
+        # print "Threading ready: ", self.threading_ready
+        # if self.threading_ready is True:
+        #     return
 
-        print "Setting threading ready true"
-        self.threading_ready = True
+        # print "Setting threading ready true"
+        # self.threading_ready = True
 
-        self.sensors = self.sensors = ChuggSensorSubscriber('/chugg/ori/final', self.sensorCallback)
+        self.sensors = ChuggSensorSubscriber('/chugg/ori/final', self.sensorCallback)
         self.vel_pub = rospy.Publisher('motor_driver/target_vel', Vector3)
-        self.start_service = rospy.Service('start_learning', Empty, self.startEpisodeCallback)
-        self.stop_service = rospy.Service('stop_learning', Empty, self.stopEpisodeCallback)
+        # self.start_service = rospy.Service('start_learning', Empty, self.startEpisodeCallback)
+        # self.stop_service = rospy.Service('stop_learning', Empty, self.stopEpisodeCallback)
 
-        self.start_cv = threading.Condition()
-        self.sensor_cv = threading.Condition()
+        # self.start_cv = threading.Condition()
+        # self.sensor_cv = threading.Condition()
 
-        self.waiting_for_sensor = False
+        # self.waiting_for_sensor = False
 
     def sensorCallback(self, ori, vel, wheel_vel, last_update_time):
         # print "Sensors: ", ori, vel
-        if not self.waiting_for_sensor:
-            return
+        # if not self.waiting_for_sensor:
+        #     return
 
         (roll, pitch, yaw) = tr.euler_from_quaternion(ori, self.euler_convention)
         vz = vel[2]
@@ -63,22 +71,24 @@ class ChuggHardware1DDomain(ChuggDomain1DBase):
         # print yaw, vz, wheelz
         self.state = np.array((yaw, vz, wheelz))
         
-        with self.sensor_cv:
-            self.sensor_cv.notify_all()
+        # with self.sensor_cv:
+        #     self.sensor_cv.notify_all()
 
     def s0(self):
-        self.startThreading()
-
+        if self.sensors is None:
+            self.startThreading()
         # Used to compute penalty for ending early
         self.current_step = 0
         self.interrupt = False
 
         # Wait for the user to press a key
         self._initializePlatform()
-        self._waitForEpisodeStart()
-        rospy.loginfo('Waiting for first sensor measurement.')
-        self._waitForStateUpdate()
-        rospy.loginfo('Got sensor measurement. Proceeding...')
+        # self._waitForEpisodeStart()
+        # rospy.loginfo('Waiting for first sensor measurement.')
+        # self._waitForStateUpdate()
+        # rospy.loginfo('Got sensor measurement. Proceeding...')
+        print 'Press any key to start the episode: '
+        raw_input()
 
         state = self.state.copy()
         
@@ -91,41 +101,47 @@ class ChuggHardware1DDomain(ChuggDomain1DBase):
         action = self.actions[action_idx]
         acc = action
 
+        self.current_step += 1
+        # print self.current_step
         # Send motor command
         self._setAcc(acc)
         # Wait for the state to update
-        self._waitForStateUpdate()
+        # self._waitForStateUpdate()
+        self.loop_rate.sleep()
 
         new_state = self.state.copy()
         self.traj.append(new_state)
         
         reward = self._getReward(action)
+
         
         return (reward, new_state, self.isTerminal(), self.possibleActions() )
 
-    def _waitForStateUpdate(self):
-        self.waiting_for_sensor = True
+    # def _waitForStateUpdate(self):
+    #     self.waiting_for_sensor = True
 
-        with self.sensor_cv:
-            self.sensor_cv.wait()
+    #     with self.sensor_cv:
+    #         self.sensor_cv.wait()
 
-        self.waiting_for_sensor = False
+    #     self.waiting_for_sensor = False
 
-    def _waitForEpisodeStart(self):
-        rospy.loginfo('Waiting for user to start episode...')
+    # def _waitForEpisodeStart(self):
+    #     rospy.loginfo('Waiting for user to start episode...')
 
-        with self.start_cv:
-            self.start_cv.wait()
+    #     with self.start_cv:
+    #         self.start_cv.wait()
 
-        rospy.loginfo("Starting episode.")
+    #     rospy.loginfo("Starting episode.")
         
     def isTerminal(self):
         term = super(ChuggHardware1DDomain, self).isTerminal()
-        interrupt = self._userInterrupted()
-        return term or interrupt
+        # interrupt = self._userInterrupted()
+        # return term or interrupt
+        return term
 
     def _setAcc(self, acc):
         new_wheel_vel = self.wheel_vel + acc*self.dt
+        new_wheel_vel = np.clip(new_wheel_vel, self.vel_limit[0], self.vel_limit[1])
         default = self.default_wheel_vel
 
         msg = Vector3()
@@ -136,18 +152,18 @@ class ChuggHardware1DDomain(ChuggDomain1DBase):
         
         self.vel_pub.publish(msg)
 
-    def startEpisodeCallback(self, request):
-        with self.start_cv:
-            self.start_cv.notify_all()
-        return []
+    # def startEpisodeCallback(self, request):
+    #     with self.start_cv:
+    #         self.start_cv.notify_all()
+    #     return []
 
-    def stopEpisodeCallback(self, request):
-        rospy.loginfo('Episode interrupted.')
-        self.interrupt = True
-        return []
+    # def stopEpisodeCallback(self, request):
+    #     rospy.loginfo('Episode interrupted.')
+    #     self.interrupt = True
+    #     return []
 
-    def _userInterrupted(self):
-        return self.interrupt
+    # def _userInterrupted(self):
+    #     return self.interrupt
     
     # Initialize hardware platform state
     def _initializePlatform(self):
@@ -158,3 +174,22 @@ class ChuggHardware1DDomain(ChuggDomain1DBase):
         msg.y = wv[1]
         msg.z = wv[2]
         self.vel_pub.publish(msg)
+
+    # def __deepcopy__(self, memo):
+    #     refs=('vel_pub', 'sensors', 'stop_service', 'start_service')
+    #     cls = self.__class__
+    #     result = cls.__new__(cls)
+    #     memo[id(self)] = result
+    #     for k, v in self.__dict__.items():
+    #         if k is "start_cv":
+    #             setattr(result, k, threading.Condition())
+    #         elif k is "sensor_cv":
+    #             setattr(result, k, threading.Condition())
+    #         elif k in refs:
+    #             setattr(result, k, self.__dict__[k])
+    #         elif k is "logger":
+    #             continue
+    #         else:
+    #             print k
+    #             setattr(result, k, deepcopy(v, memo))
+    #     return result
